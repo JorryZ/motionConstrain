@@ -20,26 +20,14 @@ History:
 _version='2.3'
 print('motionConstrain version',_version)
 
+import sys
 import numpy as np
 import math
 import scipy as sp
-
-
 from scipy.sparse.linalg import splu
-
-
-import sys
-
-
 import medImgProc
 import trimesh
-
-
 import motionSegmentation.BsplineFourier as BsplineFourier
-
-
-
-
 
 class motionConstrain:
     def __new__(cls, *args, **kwargs):
