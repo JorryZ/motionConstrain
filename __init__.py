@@ -17,32 +17,28 @@ History:
 
 
 """
-print('motionConstrain version 2.3')
+_version='2.3'
+print('motionConstrain version',_version)
 
 import numpy as np
 import math
 import scipy as sp
-#import scipy.sparse as sparse
-#from scipy.sparse import lil_matrix
-#from scipy.sparse.linalg import spsolve
+
+
 from scipy.sparse.linalg import splu
-#import os
+
+
 import sys
-sys.path.insert(0, "/home/yaplab/Programming/python3")
-sys.path.insert(0, "/home/external/zhengyu")
-#sys.path.insert(0,"C:\\Users\\bieZY\\Documents\\Python3")
-#sys.path.insert(0,"C:\\Users\\bieZY\\Google Drive\\Work - NUS\\2.PhD Project\\2.PyCode")
+
+
 import medImgProc
 import trimesh
-#import autoD as ad
-#import BsplineFourier as BsplineFourier
+
+
 import motionSegmentation.BsplineFourier as BsplineFourier
-#import motionSegmentation.bfSolver as bfSolver
-'''
-b_ad=ad.Scalar('b')
-B=[(1.-b_ad)**3./6.,(3.*b_ad**3.-6.*b_ad**2.+4.)/6.,(-3.*b_ad**3.+3.*b_ad**2.+3.*b_ad+1)/6.,b_ad**3./6.]
-rndError=0.001
-'''
+
+
+
 
 
 class motionConstrain:
