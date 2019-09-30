@@ -26,7 +26,7 @@ import trimesh
 import medImgProc
 import motionSegmentation.BsplineFourier as BsplineFourier
 import motionSegmentation.bfSolver as bfSolver
-import motionConstrain as motionConstrain
+import motionConstrain.motionConstrain as motionConstrain
 
 class mcSolver:
     # Needed files: bsf.txt, gt.vtk and img, input.stl
