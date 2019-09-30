@@ -8,7 +8,7 @@ setup(
   author = 'Yu Zheng',                   # Type in your name
   author_email = 'jorry.zhengyu@gmail.com',      # Type in your E-Mail
   url = 'https://github.com/JorryZ/motionConstrain',   # Provide either the link to your github or to your website
-  download_url = 'https://github.com/JorryZ/motionConstrain/archive/v3.1.0.tar.gz',    # I explain this later on
+  download_url = 'https://github.com/JorryZ/motionConstrain/archive/v3.1.1.tar.gz',    # I explain this later on
   keywords = ['explicit', 'motion', 'incompressibility', 'regularization'],   # Keywords that define your package best
   install_requires=['numpy','medImgProc','scipy','trimesh','motionSegmentation'],
   classifiers=[
