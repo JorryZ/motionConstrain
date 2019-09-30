@@ -13,13 +13,13 @@ History:
   Author: jorry.zhengyu@gmail.com         30SEPT2019           -V2.3 old general version
   Author: jorry.zhengyu@gmail.com         30SEPT2019           -V3.0.0 release version, general version
   Author: jorry.zhengyu@gmail.com         30SEPT2019           -V3.1.0 release version, make motionConstrainSolver a module
+  Author: jorry.zhengyu@gmail.com         30SEPT2019           -V3.1.1 optional for json
 """
-print('motionConstrainSolver version 3.1.0')
+print('motionConstrainSolver version 3.1.1')
 print('Warning: the bsFourier.txt should be in the real time, not in the phantom time, like "f3_t1".')
 
 import os
 import sys
-
 import numpy as np
 import json
 import trimesh
