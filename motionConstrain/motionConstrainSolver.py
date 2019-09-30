@@ -15,8 +15,9 @@ History:
   Author: jorry.zhengyu@gmail.com         30SEPT2019           -V3.1.0 release version, make motionConstrainSolver a module
   Author: jorry.zhengyu@gmail.com         30SEPT2019           -V3.1.1 optional for json
   Author: jorry.zhengyu@gmail.com         30SEPT2019           -V3.1.2 import error correction
+  Author: jorry.zhengyu@gmail.com         30SEPT2019           -V3.1.3 pointSampling error correction
 """
-print('motionConstrainSolver version 3.1.2')
+print('motionConstrainSolver version 3.1.3')
 print('Warning: the bsFourier.txt should be in the real time, not in the phantom time, like "f3_t1".')
 
 import os
@@ -102,8 +103,9 @@ class mcSolver:
             try:
                 sampleSourcePath=self.casePath+'\\'+vtkName
                 sampleData=medImgProc.imread(sampleSourcePath)
-                sampleData.dim=['x','y','z']
+                sampleData.dim=['z','y','x']
                 sampleData.dimlen=dimlen
+                sampleData.rearrangeDim(['x','y','z'])
                 print('Dimlen: ',sampleData.dimlen)
             except:
                 print('Warning: source of sample part from VTL file, please specify a VTK file and a dimlen (dimension length)!')
