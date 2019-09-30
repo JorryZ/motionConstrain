@@ -12,7 +12,7 @@ History:
     ---------- ---------- ----------------------------
   Author: jorry.zhengyu@gmail.com         30SEPT2019             -V3.1.0 release version
                                                         -motionConstrain version 3.0.0
-                                                        -motionConstrainSolver version 3.1.0
+                                                        -motionConstrainSolver version 3.1.1
 
 Requirements:
     numpy
@@ -25,7 +25,7 @@ Requirements:
     pickle (optional)
 All rights reserved.
 """
-_version='3.1.0'
+_version='3.1.1'
 print('motionConstrain version',_version)
 
 import os
