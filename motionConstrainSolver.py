@@ -209,7 +209,10 @@ class mcSolver:
         self.motionConstrain.writeFile((savePath+'\\'+self.bsfName+'_coefMat'+'.txt'),coefMat=1)
         self.motionConstrain.writeFile((savePath+'\\'+self.bsfName+'_dCoefMat'+'.txt'),dCoefMat=1)
         np.savetxt((savePath+'\\'+self.bsfName+'_rmsList'+'.txt'),self.motionConstrain.rmsList,fmt='%.8f',delimiter=' ')
-        if type(self.motionConstrain.dimlen)!=type(None):
-            with open((savePath+'\\'+'scale_xyz.txt'), 'w') as f:
-                json.dump(self.motionConstrain.dimlen, f)
+        try:
+            if type(self.motionConstrain.dimlen)!=type(None):
+                with open((savePath+'\\'+'scale_xyz.txt'), 'w') as f:
+                    json.dump(self.motionConstrain.dimlen, f)
+        except:
+            pass
         print('One case done, savepath:  ',savePath,'  *_*_*_*_*_*')
