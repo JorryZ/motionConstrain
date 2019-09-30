@@ -27,8 +27,6 @@ import math
 import scipy as sp
 from scipy.sparse.linalg import splu
 import sys
-sys.path.insert(0, "/home/yaplab/Programming/python3")
-sys.path.insert(0, "/home/external/zhengyu")
 import motionSegmentation.BsplineFourier as BsplineFourier
 
 class motionConstrain:
