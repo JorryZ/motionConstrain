@@ -54,6 +54,7 @@ class motionConstrain:
         self.dUdXMat=[] # [point, TF, uvw]
         
         self.dCoefMat=[]   # [point,FT,uvw]
+        self.weight=None
         self.rmsList=[]
         self.errorList=None     # divergence error of points
         print('motionConstrain_init_ done')
@@ -276,11 +277,13 @@ class motionConstrain:
             print('getMatdUdX function done!!!')
             return dUdX
         
-    def errorCalc(self,sampleCoord=None,bgCoord=None,mode='displacementWise',fterm_start=1,weight=[1.,1.],savePath=None,option=None):
-        if sampleCoord==None:
+    def errorCalc(self,sampleCoord=None,bgCoord=None,mode='displacementWise',fterm_start=1,weight=None,savePath=None,option=None):
+        if type(sampleCoord)==type(None):
             sampleCoord=self.sampleCoord
-        if bgCoord==None:
+        if type(bgCoord)==type(None):
             bgCoord=self.bgCoord
+        if type(weight)==type(None):
+            weight=self.weight
         sampleCoordSize=len(sampleCoord)
         bgCoordSize=len(bgCoord)
         print('errorListCalc......')
@@ -352,6 +355,7 @@ class motionConstrain:
         '''
         Weight: Weight[0] for sampleCoord, Weight[1] for bgCoord
         '''
+        self.weight=weight
         if method=='velocityWise':
             coefMat,rmsList=self.solve_velocityWise(sampleCoord=sampleCoord,bgCoord=bgCoord,maxError=maxError,maxIteration=maxIteration,fterm_start=fterm_start,weight=weight,convergence=convergence,reportevery=reportevery,saveFtermPath=saveFtermPath,tempSave=tempSave,resume=resume)
 
