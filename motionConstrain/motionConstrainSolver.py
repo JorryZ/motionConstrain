@@ -16,7 +16,7 @@ History:
   Author: jorry.zhengyu@gmail.com         30SEPT2019           -V3.1.1 optional for json
   Author: jorry.zhengyu@gmail.com         30SEPT2019           -V3.1.2 import error correction
   Author: jorry.zhengyu@gmail.com         30SEPT2019           -V3.1.3 pointSampling error correction
-  Author: jorry.zhengyu@gmail.com         01Oct2019            -V3.2.0 pointSampling error correction
+  Author: jorry.zhengyu@gmail.com         01Oct2019            -V3.2.0 np.sqrt(weight), weight for old verision is weight^2
 """
 print('motionConstrainSolver version 3.2.0')
 print('Warning: the bsFourier.txt should be in the real time, not in the phantom time, like "f3_t1".')
