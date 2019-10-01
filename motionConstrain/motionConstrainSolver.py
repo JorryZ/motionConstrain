@@ -213,13 +213,14 @@ class mcSolver:
         np.savetxt((savePath+'\\'+self.bsfName+'_sampleCoord'+'.txt'),self.motionConstrain.sampleCoord,fmt='%.8f',delimiter=' ')
         np.savetxt((savePath+'\\'+self.bsfName+'_bgCoord'+'.txt'),self.motionConstrain.bgCoord,fmt='%.8f',delimiter=' ')
         
+        self.motionConstrain.savePath=savePath
         self.motionConstrain.getMatB()
         self.motionConstrain.getMatdBdX()
         self.motionConstrain.getMatdUdX()
         # errorCalc test
-        self.motionConstrain.errorCalc(savePath=savePath,option='Init')   # divergence error of points
+        #self.motionConstrain.errorCalc(savePath=savePath,option='Init')   # divergence error of points
         self.motionConstrain.solve(method=mode,maxIteration=100,maxError=0.01,fterm_start=fterm_start,saveFtermPath=saveFtermPath,weight=weight,convergence=0.5,reportevery=60)
-        self.motionConstrain.errorCalc(savePath=savePath,option='Final')
+        #self.motionConstrain.errorCalc(savePath=savePath,option='Final')
         self.motionConstrain.coefZeroRemap(remap=0)
         self.motionConstrain.writeFile((savePath+'\\'+self.bsfName+'_coefMat'+'.txt'),coefMat=1)
         self.motionConstrain.writeFile((savePath+'\\'+self.bsfName+'_dCoefMat'+'.txt'),dCoefMat=1)
