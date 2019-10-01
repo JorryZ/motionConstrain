@@ -55,6 +55,7 @@ class motionConstrain:
         
         self.dCoefMat=[]   # [point,FT,uvw]
         self.weight=None
+        self.savePath=None
         self.rmsList=[]
         self.errorList=None     # divergence error of points
         print('motionConstrain_init_ done')
@@ -284,6 +285,8 @@ class motionConstrain:
             bgCoord=self.bgCoord
         if type(weight)==type(None):
             weight=self.weight
+        if type(savePath)==type(None):
+            savePath=self.savePath
         sampleCoordSize=len(sampleCoord)
         bgCoordSize=len(bgCoord)
         print('errorListCalc......')
