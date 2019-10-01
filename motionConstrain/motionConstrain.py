@@ -356,7 +356,7 @@ class motionConstrain:
             pass
         return(errorList)
         
-    def solve(self,method='displacementWise',sampleCoord=None,bgCoord=None,maxError=0.00001,maxIteration=1000,fterm_start=1,weight=[1.,1.],convergence=0.8,reportevery=1000,saveFtermPath=None,tempSave=None,resume=False,rmsBasedWeighted=None,linearConstrainPoints=[],linearConstrainWeight=None):
+    def solve(self,method='displacementWise',sampleCoord=None,bgCoord=None,maxError=0.00001,maxIteration=1000,fterm_start=1,weight=[1.,1.],convergence=0.8,reportevery=1000,saveFtermPath=None,tempSave=None,resume=False):
         '''
         Weight: Weight[0] for sampleCoord, Weight[1] for bgCoord
         '''
@@ -394,19 +394,17 @@ class motionConstrain:
         n=np.prod(self.coefMat.shape[:3])    #number of control points
         ft=self.coefMat.shape[3]
         uvw=self.coefMat.shape[4]
-        #for weight in self.weights:
-            #wdiag=np.concatenate((wdiag,np.ones(3)*weight),axis=0)
-        #if not(resume):
-            #self.dCoef=[]
-        #elif type(tempSave)!=type(None):
-            #self.loadSamplingResults(tempSave)
+
         coefMat=self.coefMat.copy()      #[x,y,z,ft,uvw]
         dBdXMat=self.dBdXMat.copy()
         rmsList=[]
         Basic=self.getMatB(bgCoord)    #len(bgCoord)=len(dCList)
         Buvw=np.zeros((3*bgCoordSize,3*n))
         for i in range(uvw):
-            Buvw[i*len(self.bgCoord):(i+1)*bgCoordSize,i*n:(i+1)*n]=Basic
+            if type(weight[1]) in [np.ndarray,list]:
+                Buvw[i*len(self.bgCoord):(i+1)*bgCoordSize,i*n:(i+1)*n]=Basic*weight[1][i]
+            else:
+                Buvw[i*len(self.bgCoord):(i+1)*bgCoordSize,i*n:(i+1)*n]=Basic*weight[1]
         Buvw=sp.sparse.csr_matrix(Buvw)
         #matW=sp.sparse.diags(np.ones(len(points)))
         for fterm in range(fterm_start,ft):
@@ -417,8 +415,7 @@ class motionConstrain:
             else:
                 fw=fterm
                 print('Current basic fourier function is cos(%dwt)--------------------'%(fw))
-            w0=weight[0]
-            w1=weight[1]
+
             dogW=self.period/2      #coef for divFree equation
             coef=np.array(coefMat[:,:,:,fterm,:]).reshape(-1,order='F')   #[n*uvw,1]
             #coef_start=coef.copy()
@@ -428,15 +425,16 @@ class motionConstrain:
                 dUdX[:,i]=dBdXMat[:,i*n:(i+1)*n].dot(coef[i*n:(i+1)*n])
             dUdX=np.sum(dUdX,axis=1)
             for ii in range(sampleCoordSize):
-                dRdC[ii,:]*=(2*dogW*dUdX[ii])
-            RMSMat=(dUdX**2)*dogW    #[sampleCoordSize,1]
-            rms=np.sum(RMSMat)*w0
-            ftCoefuvw=Buvw.dot(coef)    #[3*len(self.bgCoord),1]        
-            ftCoefuvw=sp.sparse.csr_matrix(ftCoefuvw).transpose()
+                dRdC[ii,:]*=(2*dogW*dUdX[ii]*weight[0])
+            RMSMat=(dUdX**2)*dogW*weight[0]    #[sampleCoordSize,1]
+            finalRMS=RMSMat.transpose().dot(RMSMat)
+            
+            ftCoefuvw_raw=Buvw.dot(coef)    #[3*len(self.bgCoord),1]        
+            ftCoefuvw=sp.sparse.csr_matrix(ftCoefuvw_raw).transpose()
             #weight
             #sampleWdiag=np.ones(dRdC.shape[0])*w1    #new, test
             #bgWdiag=np.ones(Buvw.shape[0])*w2
-            print('initial rms is %.8f, initial max(dRdC) is %.6f, initial max(coef) is %.4f, initial max(RMSMat) is %.6f'%(rms,np.abs(dRdC).max(),np.abs(coef).max(),RMSMat.max()))
+            print('initial RMS is %.8f, initial max(dRdC) is %.6f, initial max(coef) is %.4f, initial max(RMSMat) is %.6f'%(finalRMS,np.abs(dRdC).max(),np.abs(coef).max(),RMSMat.max()))
             error=float('inf')
             count=0.
             jumpFlag=0
@@ -449,7 +447,7 @@ class motionConstrain:
                 #Buvw=np.diag(bgWdiag).dot(Buvw)
                 #print('dRdC and Buvw solved',end='    ')
                 sparsedRdC=sp.sparse.csr_matrix(dRdC)
-                sparsedRdC=sp.sparse.vstack([sparsedRdC*w0,Buvw*w1],format='csr')
+                sparsedRdC=sp.sparse.vstack([sparsedRdC,Buvw],format='csr')
                 
                 R0=dRdC.dot(coef)
                 Rfinal=R0-RMSMat
@@ -457,7 +455,7 @@ class motionConstrain:
                 #ftCoefuvw=np.diag(bgWdiag).dot(ftCoefuvw)
                 #print('Rfinal and ftCoefuvw solved',end='    ')
                 sparseRMSMat=sp.sparse.csc_matrix(Rfinal).transpose()
-                sparseRMSMat=sp.sparse.vstack([sparseRMSMat*w0,ftCoefuvw*w1],format='csc')
+                sparseRMSMat=sp.sparse.vstack([sparseRMSMat,ftCoefuvw],format='csc')
                 matA=sparsedRdC.transpose().dot(sparsedRdC)
                 temp=sp.sparse.diags(matA.diagonal())
                 A=sp.sparse.csc_matrix(matA+lmLambda*temp)     #lavenberg-Marquardt correction, add lmLambda*diagonals to the diagonal of matA
@@ -468,7 +466,7 @@ class motionConstrain:
                 #print('newCoef solved')
                 newCoef=newCoef.reshape((-1,))
                 dCoef=newCoef-coef  #[n*uvw,1]
-                '''
+                
                 error=0
                 minSpacing=self.spacing[:3].min()
                 #maxdCoef=np.abs(dCoef).max()
@@ -477,26 +475,34 @@ class motionConstrain:
                         error=max(error,np.abs(dCoef[i])/minSpacing)
                     else:
                         error=max(error,np.abs(dCoef[i])/np.abs(coef[i]))
-                '''
+                
+                coef_backup=coef.copy()
+                dRdC_backup=dRdC.copy()
+                RMSMat_backup=RMSMat.copy()
+                ftCoefuvw_backup=ftCoefuvw_raw.copy()
+                finalRMS_backup = finalRMS
+                
                 ratio=reductionRatio
                 if convergence:
                     if abs(dCoef).max()>self.bsFourier.spacing[:3].min()*convergence:
                         ratio=min(ratio,self.bsFourier.spacing[:3].min()*convergence/abs(dCoef).max())
-                coef_backup=coef.copy()
-                dRdC_backup=dRdC.copy()
-                RMSMat_backup=RMSMat.copy()
-                ftCoefuvw_backup=ftCoefuvw.copy()
+                
                 coef+=ratio*dCoef
                 dUdX=self.getMatdUdX(coef=coef,order='uvw') #[sampleCoordSize,uvw]
                 dUdX=np.sum(dUdX,axis=1)
                 dRdC=self.dBdXMat.copy()    #[sampleCoordSize,uvw*n]
-                for ii in range(sampleCoordSize):
-                    dRdC[ii,:]*=(dogW*dUdX[ii])
-                RMSMat=(dUdX**2)*dogW    #[sampleCoordSize,1]
-                ftCoefuvw=Buvw.dot(coef)    #[3*len(self.BFpoints),1]
-                ftCoefuvw=sp.sparse.csr_matrix(ftCoefuvw).transpose()
                 
-                deltarms=np.sum(RMSMat)-rms
+                for ii in range(sampleCoordSize):
+                    dRdC[ii,:]*=(2*dogW*dUdX[ii]*weight[0])
+                RMSMat=(dUdX**2)*dogW*weight[0]    #[sampleCoordSize,1]
+                
+                ftCoefuvw_raw=Buvw.dot(coef)    #[3*len(self.BFpoints),1]
+                ftCoefuvw=sp.sparse.csr_matrix(ftCoefuvw).transpose()
+                deltaft = ftCoefuvw_raw-ftCoefuvw_backup
+                
+                finalRMSMat = np.concatenate((RMSMat,deltaft),axis=0)   #[sampleCoordSize+3*len(self.BFpoints),1]
+                finalRMS = finalRMSMat.transpose().dot(finalRMSMat)               
+                deltarms = finalRMS - finalRMS_backup
                 if deltarms>0.:
                     print('RMS value increases!!! deltarms is %.4f'%(deltarms))
                     coef=coef_backup.copy()
@@ -521,11 +527,9 @@ class motionConstrain:
                         jumpFlag==0
                     if jumpNum==20:
                         count=maxIteration  #jump out
-                        print('rms didnt change for %d iteration, Fterm %d jump out!!!!!!!!'%(jumpNum,fterm))
+                        print('RMS didnt change for %d iteration, Fterm %d jump out!!!!!!!!'%(jumpNum,fterm))
                 else:
-                    '''
-                    error=np.abs(deltarms/rms)
-                    print('RMS value is decreased!!! deltarms is %.4f, rate: %.4f'%(deltarms,np.abs(deltarms)/rms))
+                    print('RMS value is decreased!!! deltarms is %.4f, rate: %.4f'%(deltarms,np.abs(deltarms)/finalRMS_backup))
                     if ratio>0.9 and lmLambda!=lmLambda_min:
                         if (lmLambda/np.sqrt(lmLambda_incrRatio))>lmLambda_min:
                             lmLambda=lmLambda/np.sqrt(lmLambda_incrRatio)
@@ -533,21 +537,15 @@ class motionConstrain:
                             lmLambda=lmLambda_min
                     elif reductionRatio<0.9:
                         reductionRatio*=1.1
-                    rms=np.sum(RMSMat)  #new rms
-                    '''
-                    error=0
-                    #maxdCoef=np.abs(dCoef).max()
-                    for i in range(RMSMat.shape[0]):
-                        if RMSMat_backup[i]!=0:
-                            error=max(error,np.abs(RMSMat_backup[i]-RMSMat[i])/np.abs(RMSMat_backup[i]))
-                    
+                    #rms=np.sum(RMSMat)  #new rms
+
                     if movAvgError:
                         error=np.abs(movAvgError-rms)/movAvgError
                         movAvgError=(movAvgError+rms)/2.
                     count+=1
                 
-                rmsList.append(rms)                
-                print('rms is %.8f, error is %.8f'%(rms,error))
+                rmsList.append(finalRMS)                
+                print('RMS is %.8f, error is %.8f'%(finalRMS,error))
                 print('max(dRdC) is %.6f, max(coef) is %.4f, max(RMSMat) is %.6f'%(np.abs(dRdC).max(),np.abs(coef).max(),RMSMat.max()))
                 if count==maxIteration:
                     print('Maximum iterations reached for matrix: ft=',fterm)
@@ -564,10 +562,6 @@ class motionConstrain:
         return (coefMat,rmsList)
     
     def solve_velocityWise(self,sampleCoord=None,bgCoord=None,maxError=0.00001,maxIteration=1000,fterm_start=1,weight=[1.,1.],convergence=0.8,reportevery=1000,saveFtermPath=None,tempSave=None,resume=False,movAvgError=False,lmLambda_init=0.001,lmLambda_incrRatio=5.,lmLambda_max=float('inf'),lmLambda_min=0.):
-        if type(weight[1]) in (list, np.array):
-            if len(weight[1])!=3:
-                print('error: if weight[1] is a list or array, please input 3 values for xyz')
-                sys.exit()
         if sampleCoord==None:
             sampleCoord=self.sampleCoord
         if bgCoord==None:
@@ -586,7 +580,7 @@ class motionConstrain:
         Basic=self.getMatB(bgCoord)    #len(bgCoord)=len(dCList)
         Buvw=np.zeros((3*bgCoordSize,3*n))
         for i in range(uvw):
-            if type(weight[1]) in (list, np.array):
+            if type(weight[1]) in [np.ndarray,list]:
                 Buvw[i*len(self.bgCoord):(i+1)*bgCoordSize,i*n:(i+1)*n]=Basic*weight[1][i]
             else:
                 Buvw[i*len(self.bgCoord):(i+1)*bgCoordSize,i*n:(i+1)*n]=Basic*weight[1]
@@ -612,7 +606,7 @@ class motionConstrain:
             for ii in range(sampleCoordSize):
                 dRdC[ii,:]*=(2*dogW*dUdX[ii]*weight[0])
             RMSMat=(dUdX**2)*dogW*weight[0]    #[sampleCoordSize,1]
-            finalRMS=np.sum(RMSMat)**2
+            finalRMS=RMSMat.transpose().dot(RMSMat)
             
             ftCoefuvw_raw=Buvw.dot(coef)    #[3*len(self.bgCoord),1]
             ftCoefuvw=sp.sparse.csr_matrix(ftCoefuvw_raw).transpose()
@@ -692,8 +686,7 @@ class motionConstrain:
                 wMat_2D = np.diag(wMat_1D,0)
                 '''
                 finalRMSMat = np.concatenate((RMSMat,deltaft),axis=0)   #[sampleCoordSize+3*len(self.BFpoints),1]
-                finalRMS = finalRMSMat.transpose().dot(finalRMSMat)
-                
+                finalRMS = finalRMSMat.transpose().dot(finalRMSMat)                
                 deltarms = finalRMS - finalRMS_backup
                 if deltarms>0.:
                     print('RMS value increases!!! deltarms is %.4f'%(deltarms))
@@ -719,7 +712,7 @@ class motionConstrain:
                         jumpFlag==0
                     if jumpNum==20:
                         count=maxIteration  #jump out
-                        print('rms didnt change for %d iteration, Fterm %d jump out!!!!!!!!'%(jumpNum,fterm))
+                        print('RMS didnt change for %d iteration, Fterm %d jump out!!!!!!!!'%(jumpNum,fterm))
                 else:
                     print('RMS value is decreased!!! deltarms is %.4f, rate: %.4f'%(deltarms,np.abs(deltarms)/finalRMS_backup))
                     if ratio>0.9 and lmLambda!=lmLambda_min:
@@ -729,15 +722,15 @@ class motionConstrain:
                             lmLambda=lmLambda_min
                     elif reductionRatio<0.9:
                         reductionRatio*=1.1
-                    rms=np.sum(RMSMat)  #new rms
+                    #rms=np.sum(RMSMat)  #new rms
 
                     if movAvgError:
                         error=np.abs(movAvgError-rms)/movAvgError
                         movAvgError=(movAvgError+rms)/2.
                     count+=1
                 
-                rmsList.append(rms)                
-                print('rms is %.8f, error is %.8f'%(rms,error))
+                rmsList.append(finalRMS)                
+                print('RMS is %.8f, error is %.8f'%(finalRMS,error))
                 print('max(dRdC) is %.6f, max(coef) is %.4f, max(RMSMat) is %.6f'%(np.abs(dRdC).max(),np.abs(coef).max(),RMSMat.max()))
                 if count==maxIteration:
                     print('Maximum iterations reached for matrix: ft=',fterm)
