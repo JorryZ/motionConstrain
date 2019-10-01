@@ -16,8 +16,9 @@ History:
   Author: jorry.zhengyu@gmail.com         30SEPT2019           -V3.1.1 optional for json
   Author: jorry.zhengyu@gmail.com         30SEPT2019           -V3.1.2 import error correction
   Author: jorry.zhengyu@gmail.com         30SEPT2019           -V3.1.3 pointSampling error correction
+  Author: jorry.zhengyu@gmail.com         01Oct2019            -V3.2.0 pointSampling error correction
 """
-print('motionConstrainSolver version 3.1.3')
+print('motionConstrainSolver version 3.2.0')
 print('Warning: the bsFourier.txt should be in the real time, not in the phantom time, like "f3_t1".')
 
 import os
@@ -159,6 +160,7 @@ class mcSolver:
         print('Sampling done: sampleCoord has %d points, bgCoord has %d points, '%(len(self.motionConstrain.sampleCoord),len(self.motionConstrain.bgCoord)))
         
     def solve(self,mode='displacementWise',weight=[7.,1.],fterm_start=1,customPath=None):
+        weight=np.sqrt(weight)
         if self.reShape==True:
             sampleCoord=self.motionConstrain.sampleCoord.copy()
             bgCoord=self.motionConstrain.bgCoord.copy()
