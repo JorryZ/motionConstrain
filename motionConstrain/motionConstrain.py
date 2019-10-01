@@ -20,9 +20,9 @@ History:
   Author: jorry.zhengyu@gmail.com         01Oct2019              -VT4.0.0 test version, use elements to calculate error (original use sum), maxError from 0.0001 to 0.00001
   Author: jorry.zhengyu@gmail.com         01Oct2019              -V4.1.0 test version, add weight for Buvw
   Author: jorry.zhengyu@gmail.com         01Oct2019              -V4.1.1 test version, code check
-
+  Author: jorry.zhengyu@gmail.com         01Oct2019              -V4.1.2 test version, func errorCalc modify
 """
-print('motionConstrain test version 4.1.1')
+print('motionConstrain test version 4.1.2')
 
 import numpy as np
 import math
@@ -276,15 +276,15 @@ class motionConstrain:
             print('getMatdUdX function done!!!')
             return dUdX
         
-    def errorCalc(self,sampleCoord=None,bgCoord=None,fterm_start=1,weight=[1.,1.],savePath=None,option=None):
+    def errorCalc(self,sampleCoord=None,bgCoord=None,mode='displacementWise',fterm_start=1,weight=[1.,1.],savePath=None,option=None):
         if sampleCoord==None:
             sampleCoord=self.sampleCoord
         if bgCoord==None:
             bgCoord=self.bgCoord
         sampleCoordSize=len(sampleCoord)
         bgCoordSize=len(bgCoord)
-        print('normCalc......')
-        print('sampleCoord has %d points, bgCoord has %d points, '%(sampleCoordSize,bgCoordSize),'weight is ', weight)
+        print('errorListCalc......')
+        #print('sampleCoord has %d points, bgCoord has %d points, '%(sampleCoordSize,bgCoordSize),'weight is ', weight)
         #wdiag=np.ones(sampleCoordSize)
         n=np.prod(self.coefMat.shape[:3])    #number of control points
         ft=self.coefMat.shape[3]
@@ -301,17 +301,24 @@ class motionConstrain:
         Basic=self.getMatB(bgCoord)    #len(bgCoord)=len(dCList)
         Buvw=np.zeros((3*bgCoordSize,3*n))
         for i in range(uvw):
-            Buvw[i*len(self.bgCoord):(i+1)*bgCoordSize,i*n:(i+1)*n]=Basic
+            if type(weight[1]) in [np.ndarray,list]:
+                Buvw[i*len(self.bgCoord):(i+1)*bgCoordSize,i*n:(i+1)*n]=Basic*weight[1][i]
+            else:
+                Buvw[i*len(self.bgCoord):(i+1)*bgCoordSize,i*n:(i+1)*n]=Basic*weight[1]
         Buvw=sp.sparse.csr_matrix(Buvw)
         #matW=sp.sparse.diags(np.ones(len(points)))
         for fterm in range(fterm_start,ft):
             if fterm>(ft//2):
                 fw=fterm-ft//2
-                print('Current basic fourier function is sin(%dwt)--------------------'%(fw))
+                print('Basic fourier function is sin(%dwt)------'%(fw))
             else:
                 fw=fterm
-                print('Current basic fourier function is cos(%dwt)--------------------'%(fw))
-            dogW=self.period/2      #coef for divFree equation
+                print('Basic fourier function is cos(%dwt)------'%(fw))
+            if mode=='displacementWise':
+                dogW=self.period/2      #coef for divFree equation
+            elif mode=='velocityWise':
+                dogW=((fw*2.*np.pi/self.period)**2)*self.period/2
+            
             coef=np.array(coefMat[:,:,:,fterm,:]).reshape(-1,order='F')   #[n*uvw,1]
             #coef_start=coef.copy()
             dUdX=np.zeros((sampleCoordSize,uvw))    #[sampleCoordSize,uvw]
@@ -320,8 +327,8 @@ class motionConstrain:
                 dUdX[:,i]=dBdXMat[:,i*n:(i+1)*n].dot(coef[i*n:(i+1)*n])
             dUdX=np.sum(dUdX,axis=1)
             for ii in range(sampleCoordSize):
-                dRdC[ii,:]*=(2*dogW*dUdX[ii])
-            RMSMat=(dUdX**2)*dogW    #[sampleCoordSize,1]
+                dRdC[ii,:]*=(2*dogW*dUdX[ii]*weight[0])
+            RMSMat=(dUdX**2)*dogW*weight[0]    #[sampleCoordSize,1]
             #rms=np.sum(RMSMat)
             ftCoefuvw=Buvw.dot(coef)    #[uvw*len(self.bgCoord),1]
             
@@ -330,21 +337,6 @@ class motionConstrain:
             ftCoefmeanSqrt=np.sqrt((ftCoefuvw**2).mean())
             #valueList.append([RMSMat.max(),RMSMat.mean(),RMSMat.min(),ftCoefuvw.max(),ftCoefuvw.mean(),ftCoefuvw.min()])
             errorList.append([len(RMSMat),RMSMat.max(),RMSMat.mean(),RMSMat.min(),RMSmeanSqrt,len(ftCoefuvw),ftCoefuvw.max(),ftCoefuvw.mean(),ftCoefuvw.min(),ftCoefmeanSqrt])
-
-            '''
-            ftCoefuvw=sp.sparse.csr_matrix(ftCoefuvw).transpose()
-            print('initial rms is %.8f, initial max(dRdC) is %.6f, initial max(coef) is %.4f, initial max(RMSMat) is %.6f'%(rms,np.abs(dRdC).max(),np.abs(coef).max(),RMSMat.max()))
-            count=0.
-            print('iteration of solve_matrix of Fterm %d: %.4f----------'%(fterm,count))
-            
-            sparsedRdC=sp.sparse.csr_matrix(dRdC)
-            sparsedRdC=sp.sparse.vstack([sparsedRdC*weight[0],Buvw*weight[1]],format='csr')
-            
-            R0=dRdC.dot(coef)
-            Rfinal=R0-RMSMat
-            sparseRMSMat=sp.sparse.csc_matrix(Rfinal).transpose()
-            sparseRMSMat=sp.sparse.vstack([sparseRMSMat*weight[0],ftCoefuvw*weight[1]],format='csc')
-            '''
         self.errorList=errorList
         if type(option)!=type(None):
             filePath=savePath+'errorList-{:s}.txt'.format(option)
