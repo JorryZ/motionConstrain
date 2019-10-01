@@ -16,11 +16,11 @@ History:
   Author: jorry.zhengyu@gmail.com         30SEPT2019             -V2.5 Add weight in solve_velocityWise
   
   Author: jorry.zhengyu@gmail.com         30SEPT2019             -V3.0.0 release version, modify func motionConstrain.samplePointsFromFile and change name to samplePointsFromSource
-
+  Author: jorry.zhengyu@gmail.com         01Oct2019              -VT4.0.0 test version, use elements to calculate error (original use sum), maxError from 0.0001 to 0.00001
 
 
 """
-print('motionConstrain version 3.0.0')
+print('motionConstrain version T4.0.0')
 
 import numpy as np
 import math
@@ -355,7 +355,7 @@ class motionConstrain:
             pass
         return(errorList)
         
-    def solve(self,method='displacementWise',sampleCoord=None,bgCoord=None,maxError=0.0001,maxIteration=1000,fterm_start=1,weight=[1.,1.],convergence=0.8,reportevery=1000,saveFtermPath=None,tempSave=None,resume=False,rmsBasedWeighted=None,linearConstrainPoints=[],linearConstrainWeight=None):
+    def solve(self,method='displacementWise',sampleCoord=None,bgCoord=None,maxError=0.00001,maxIteration=1000,fterm_start=1,weight=[1.,1.],convergence=0.8,reportevery=1000,saveFtermPath=None,tempSave=None,resume=False,rmsBasedWeighted=None,linearConstrainPoints=[],linearConstrainWeight=None):
         '''
         Weight: Weight[0] for sampleCoord, Weight[1] for bgCoord
         '''
@@ -381,7 +381,7 @@ class motionConstrain:
                 rmsweight=(rmsList.max()+rmsList.min())-rmsList
         print('motionConstrain.solve completed')
 
-    def solve_displacementWise(self,sampleCoord=None,bgCoord=None,maxError=0.0001,maxIteration=1000,fterm_start=1,weight=[1.,1.],convergence=0.8,reportevery=1000,saveFtermPath=None,tempSave=None,resume=False,movAvgError=False,lmLambda_init=0.001,lmLambda_incrRatio=5.,lmLambda_max=float('inf'),lmLambda_min=0.):
+    def solve_displacementWise(self,sampleCoord=None,bgCoord=None,maxError=0.00001,maxIteration=1000,fterm_start=1,weight=[1.,1.],convergence=0.8,reportevery=1000,saveFtermPath=None,tempSave=None,resume=False,movAvgError=False,lmLambda_init=0.001,lmLambda_incrRatio=5.,lmLambda_max=float('inf'),lmLambda_min=0.):
         if sampleCoord==None:
             sampleCoord=self.sampleCoord
         if bgCoord==None:
@@ -522,6 +522,7 @@ class motionConstrain:
                         count=maxIteration  #jump out
                         print('rms didnt change for %d iteration, Fterm %d jump out!!!!!!!!'%(jumpNum,fterm))
                 else:
+                    '''
                     error=np.abs(deltarms/rms)
                     print('RMS value is decreased!!! deltarms is %.4f, rate: %.4f'%(deltarms,np.abs(deltarms)/rms))
                     if ratio>0.9 and lmLambda!=lmLambda_min:
@@ -538,7 +539,7 @@ class motionConstrain:
                     for i in range(RMSMat.shape[0]):
                         if RMSMat_backup[i]!=0:
                             error=max(error,np.abs(RMSMat_backup[i]-RMSMat[i])/np.abs(RMSMat_backup[i]))
-                    '''
+                    
                     if movAvgError:
                         error=np.abs(movAvgError-rms)/movAvgError
                         movAvgError=(movAvgError+rms)/2.
@@ -561,7 +562,7 @@ class motionConstrain:
         self.rmsList=rmsList.copy()
         return (coefMat,rmsList)
     
-    def solve_velocityWise(self,sampleCoord=None,bgCoord=None,maxError=0.0001,maxIteration=1000,fterm_start=1,weight=[1.,1.],convergence=0.8,reportevery=1000,saveFtermPath=None,tempSave=None,resume=False,movAvgError=False,lmLambda_init=0.001,lmLambda_incrRatio=5.,lmLambda_max=float('inf'),lmLambda_min=0.):
+    def solve_velocityWise(self,sampleCoord=None,bgCoord=None,maxError=0.00001,maxIteration=1000,fterm_start=1,weight=[1.,1.],convergence=0.8,reportevery=1000,saveFtermPath=None,tempSave=None,resume=False,movAvgError=False,lmLambda_init=0.001,lmLambda_incrRatio=5.,lmLambda_max=float('inf'),lmLambda_min=0.):
         if sampleCoord==None:
             sampleCoord=self.sampleCoord
         if bgCoord==None:
@@ -694,6 +695,7 @@ class motionConstrain:
                         count=maxIteration  #jump out
                         print('rms didnt change for %d iteration, Fterm %d jump out!!!!!!!!'%(jumpNum,fterm))
                 else:
+                    '''
                     error=np.abs(deltarms/rms)
                     print('RMS value is decreased!!! deltarms is %.4f, rate: %.4f'%(deltarms,np.abs(deltarms)/rms))
                     if ratio>0.9 and lmLambda!=lmLambda_min:
@@ -710,7 +712,7 @@ class motionConstrain:
                     for i in range(RMSMat.shape[0]):
                         if RMSMat_backup[i]!=0:
                             error=max(error,np.abs(RMSMat_backup[i]-RMSMat[i])/np.abs(RMSMat_backup[i]))
-                    '''
+                    
                     if movAvgError:
                         error=np.abs(movAvgError-rms)/movAvgError
                         movAvgError=(movAvgError+rms)/2.
