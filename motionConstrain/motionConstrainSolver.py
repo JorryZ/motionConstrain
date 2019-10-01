@@ -159,8 +159,16 @@ class mcSolver:
         self.spacingDivision=spacingDivision
         print('Sampling done: sampleCoord has %d points, bgCoord has %d points, '%(len(self.motionConstrain.sampleCoord),len(self.motionConstrain.bgCoord)))
         
-    def solve(self,mode='displacementWise',weight=[7.,1.],fterm_start=1,customPath=None):
-        weight=np.sqrt(weight)
+    def solve(self,mode='displacementWise',weight=[1.,1.],fterm_start=1,customPath=None):
+        if type(weight[1]) in [np.ndarray,list]:
+            if len(weight[1])!=3:
+                print('error: if weight[1] is a list or array, please input 3 values for xyz')
+                sys.exit()
+            else:
+                weight[0]=np.sqrt(weight[0])
+                weight[1]=np.sqrt(weight[1])
+        else:
+            weight=np.sqrt(weight)
         if self.reShape==True:
             sampleCoord=self.motionConstrain.sampleCoord.copy()
             bgCoord=self.motionConstrain.bgCoord.copy()
