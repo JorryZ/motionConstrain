@@ -19,15 +19,15 @@ History:
   
   Author: jorry.zhengyu@gmail.com         01Oct2019              -VT4.0.0 test version, use elements to calculate error (original use sum), maxError from 0.0001 to 0.00001
   Author: jorry.zhengyu@gmail.com         01Oct2019              -V4.1.0 test version, add weight for Buvw
+  Author: jorry.zhengyu@gmail.com         01Oct2019              -V4.1.1 test version, code check
 
 """
-print('motionConstrain test version 4.1.0')
+print('motionConstrain test version 4.1.1')
 
 import numpy as np
 import math
 import scipy as sp
 from scipy.sparse.linalg import splu
-import sys
 import motionSegmentation.BsplineFourier as BsplineFourier
 
 class motionConstrain:
@@ -322,7 +322,7 @@ class motionConstrain:
             for ii in range(sampleCoordSize):
                 dRdC[ii,:]*=(2*dogW*dUdX[ii])
             RMSMat=(dUdX**2)*dogW    #[sampleCoordSize,1]
-            rms=np.sum(RMSMat)
+            #rms=np.sum(RMSMat)
             ftCoefuvw=Buvw.dot(coef)    #[uvw*len(self.bgCoord),1]
             
             # key sentence
@@ -362,27 +362,13 @@ class motionConstrain:
         '''
         if method=='velocityWise':
             coefMat,rmsList=self.solve_velocityWise(sampleCoord=sampleCoord,bgCoord=bgCoord,maxError=maxError,maxIteration=maxIteration,fterm_start=fterm_start,weight=weight,convergence=convergence,reportevery=reportevery,saveFtermPath=saveFtermPath,tempSave=tempSave,resume=resume)
-            if type(rmsBasedWeighted)==type(None):
-                rmsweight=None
-            elif rmsBasedWeighted=='log':
-                rmsweight=np.log((rmsList.max()+rmsList.min())/rmsList)
-            elif rmsBasedWeighted=='square-inverse':
-                rmsweight=1/(rmsList**2.)
-            else:
-                rmsweight=(rmsList.max()+rmsList.min())-rmsList
+
         elif method=='displacementWise':
             coefMat,rmsList=self.solve_displacementWise(sampleCoord=sampleCoord,bgCoord=bgCoord,maxError=maxError,maxIteration=maxIteration,fterm_start=fterm_start,weight=weight,convergence=convergence,reportevery=reportevery,saveFtermPath=saveFtermPath,tempSave=tempSave,resume=resume)
-            if type(rmsBasedWeighted)==type(None):
-                rmsweight=None
-            elif rmsBasedWeighted=='log':
-                rmsweight=np.log((rmsList.max()+rmsList.min())/rmsList)
-            elif rmsBasedWeighted=='square-inverse':
-                rmsweight=1/(rmsList**2.)
-            else:
-                rmsweight=(rmsList.max()+rmsList.min())-rmsList
+
         print('motionConstrain.solve completed')
 
-    def solve_displacementWise(self,sampleCoord=None,bgCoord=None,maxError=0.00001,maxIteration=1000,fterm_start=1,weight=[1.,1.],convergence=0.8,reportevery=1000,saveFtermPath=None,tempSave=None,resume=False,movAvgError=False,lmLambda_init=0.001,lmLambda_incrRatio=5.,lmLambda_max=float('inf'),lmLambda_min=0.):
+    def solve_displacementWise(self,sampleCoord=None,bgCoord=None,maxError=0.00001,maxIteration=1000,fterm_start=1,weight=[1.,1.],convergence=0.8,reportevery=1000,saveFtermPath=None,tempSave=None,resume=False,lmLambda_init=0.001,lmLambda_incrRatio=5.,lmLambda_max=float('inf'),lmLambda_min=0.):
         if sampleCoord==None:
             sampleCoord=self.sampleCoord
         if bgCoord==None:
@@ -538,10 +524,6 @@ class motionConstrain:
                     elif reductionRatio<0.9:
                         reductionRatio*=1.1
                     #rms=np.sum(RMSMat)  #new rms
-
-                    if movAvgError:
-                        error=np.abs(movAvgError-rms)/movAvgError
-                        movAvgError=(movAvgError+rms)/2.
                     count+=1
                 
                 rmsList.append(finalRMS)                
@@ -561,7 +543,7 @@ class motionConstrain:
         self.rmsList=rmsList.copy()
         return (coefMat,rmsList)
     
-    def solve_velocityWise(self,sampleCoord=None,bgCoord=None,maxError=0.00001,maxIteration=1000,fterm_start=1,weight=[1.,1.],convergence=0.8,reportevery=1000,saveFtermPath=None,tempSave=None,resume=False,movAvgError=False,lmLambda_init=0.001,lmLambda_incrRatio=5.,lmLambda_max=float('inf'),lmLambda_min=0.):
+    def solve_velocityWise(self,sampleCoord=None,bgCoord=None,maxError=0.00001,maxIteration=1000,fterm_start=1,weight=[1.,1.],convergence=0.8,reportevery=1000,saveFtermPath=None,tempSave=None,resume=False,lmLambda_init=0.001,lmLambda_incrRatio=5.,lmLambda_max=float('inf'),lmLambda_min=0.):
         if sampleCoord==None:
             sampleCoord=self.sampleCoord
         if bgCoord==None:
@@ -723,10 +705,6 @@ class motionConstrain:
                     elif reductionRatio<0.9:
                         reductionRatio*=1.1
                     #rms=np.sum(RMSMat)  #new rms
-
-                    if movAvgError:
-                        error=np.abs(movAvgError-rms)/movAvgError
-                        movAvgError=(movAvgError+rms)/2.
                     count+=1
                 
                 rmsList.append(finalRMS)                
