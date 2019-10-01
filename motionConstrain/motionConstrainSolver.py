@@ -17,8 +17,9 @@ History:
   Author: jorry.zhengyu@gmail.com         30SEPT2019           -V3.1.2 import error correction
   Author: jorry.zhengyu@gmail.com         30SEPT2019           -V3.1.3 pointSampling error correction
   Author: jorry.zhengyu@gmail.com         01Oct2019            -V3.2.0 np.sqrt(weight), weight for old verision is weight^2
+  Author: jorry.zhengyu@gmail.com         01Oct2019            -V3.2.1 add weight for Buvw
 """
-print('motionConstrainSolver version 3.2.0')
+print('motionConstrainSolver version 3.2.1')
 print('Warning: the bsFourier.txt should be in the real time, not in the phantom time, like "f3_t1".')
 
 import os
