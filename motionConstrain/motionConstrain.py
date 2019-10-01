@@ -18,10 +18,10 @@ History:
   Author: jorry.zhengyu@gmail.com         30SEPT2019             -V3.0.0 release version, modify func motionConstrain.samplePointsFromFile and change name to samplePointsFromSource
   
   Author: jorry.zhengyu@gmail.com         01Oct2019              -VT4.0.0 test version, use elements to calculate error (original use sum), maxError from 0.0001 to 0.00001
-
+  Author: jorry.zhengyu@gmail.com         01Oct2019              -TV4.1.0 test version, add weight for Buvw
 
 """
-print('motionConstrain version T4.0.0')
+print('motionConstrain test version 4.1.0')
 
 import numpy as np
 import math
