@@ -19,8 +19,9 @@ History:
   Author: jorry.zhengyu@gmail.com         01Oct2019            -V3.2.0 np.sqrt(weight), weight for old verision is weight^2
   Author: jorry.zhengyu@gmail.com         01Oct2019            -V3.2.1 add weight for Buvw
   Author: jorry.zhengyu@gmail.com         01Oct2019            -V3.2.2 import motionConstrain
+  Author: jorry.zhengyu@gmail.com         02Oct2019            -V3.2.3 modify solve input
 """
-print('motionConstrainSolver version 3.2.2')
+print('motionConstrainSolver version 3.2.3')
 print('Warning: the bsFourier.txt should be in the real time, not in the phantom time, like "f3_t1".')
 
 import os
@@ -161,7 +162,7 @@ class mcSolver:
         self.spacingDivision=spacingDivision
         print('Sampling done: sampleCoord has %d points, bgCoord has %d points, '%(len(self.motionConstrain.sampleCoord),len(self.motionConstrain.bgCoord)))
         
-    def solve(self,mode='displacementWise',weight=[1.,1.],fterm_start=1,customPath=None):
+    def solve(self,mode='displacementWise',customPath=None,regular=None,maxIteration=None,maxError=None,weight=[1.,1.],fterm_start=1,convergence=None,reportevery=None):
         if type(weight[1]) in [np.ndarray,list]:
             if len(weight[1])!=3:
                 print('error: if weight[1] is a list or array, please input 3 values for xyz')
@@ -219,7 +220,7 @@ class mcSolver:
         self.motionConstrain.getMatdUdX()
         # errorCalc test
         #self.motionConstrain.errorCalc(savePath=savePath,option='Init')   # divergence error of points
-        self.motionConstrain.solve(method=mode,maxIteration=100,maxError=0.01,fterm_start=fterm_start,saveFtermPath=saveFtermPath,weight=weight,convergence=0.5,reportevery=60)
+        self.motionConstrain.solve(method=mode,regular=regular,maxIteration=maxIteration,maxError=maxError,fterm_start=fterm_start,saveFtermPath=saveFtermPath,weight=weight,convergence=convergence,reportevery=reportevery)
         #self.motionConstrain.errorCalc(savePath=savePath,option='Final')
         self.motionConstrain.coefZeroRemap(remap=0)
         self.motionConstrain.writeFile((savePath+'\\'+self.bsfName+'_coefMat'+'.txt'),coefMat=1)
