@@ -21,8 +21,9 @@ History:
   Author: jorry.zhengyu@gmail.com         01Oct2019              -V4.1.0 test version, add weight for Buvw
   Author: jorry.zhengyu@gmail.com         01Oct2019              -V4.1.1 test version, code check
   Author: jorry.zhengyu@gmail.com         01Oct2019              -V4.1.2 test version, func errorCalc modify
+  Author: jorry.zhengyu@gmail.com         02Oct2019              -V4.2.0 test version, add regular for ftCoefuvw (norm, fast)
 """
-print('motionConstrain test version 4.1.2')
+print('motionConstrain test version 4.2.0')
 
 import numpy as np
 import math
@@ -354,8 +355,10 @@ class motionConstrain:
             pass
         return(errorList)
         
-    def solve(self,method='displacementWise',sampleCoord=None,bgCoord=None,maxError=0.00001,maxIteration=1000,fterm_start=1,weight=[1.,1.],convergence=0.8,reportevery=1000,saveFtermPath=None,tempSave=None,resume=False):
+    def solve(self,method='displacementWise',sampleCoord=None,bgCoord=None,regular='norm',maxError=0.00001,maxIteration=1000,fterm_start=1,weight=[1.,1.],convergence=0.8,reportevery=1000,saveFtermPath=None,tempSave=None,resume=False):
         '''
+        method: 'displacementWise', 'velocityWise'
+        regular: 'norm', 'fast', for ftCoefuvw (initial, update)
         Weight: Weight[0] for sampleCoord, Weight[1] for bgCoord
         '''
         self.weight=weight
@@ -367,7 +370,7 @@ class motionConstrain:
 
         print('motionConstrain.solve completed')
 
-    def solve_displacementWise(self,sampleCoord=None,bgCoord=None,maxError=0.00001,maxIteration=1000,fterm_start=1,weight=[1.,1.],convergence=0.8,reportevery=1000,saveFtermPath=None,tempSave=None,resume=False,lmLambda_init=0.001,lmLambda_incrRatio=5.,lmLambda_max=float('inf'),lmLambda_min=0.):
+    def solve_displacementWise(self,sampleCoord=None,bgCoord=None,regular='norm',maxError=0.00001,maxIteration=1000,fterm_start=1,weight=[1.,1.],convergence=0.8,reportevery=1000,saveFtermPath=None,tempSave=None,resume=False,lmLambda_init=0.001,lmLambda_incrRatio=5.,lmLambda_max=float('inf'),lmLambda_min=0.):
         if sampleCoord==None:
             sampleCoord=self.sampleCoord
         if bgCoord==None:
@@ -414,8 +417,10 @@ class motionConstrain:
             RMSMat=(dUdX**2)*dogW*weight[0]    #[sampleCoordSize,1]
             finalRMS=RMSMat.transpose().dot(RMSMat)
             
-            ftCoefuvw_raw=Buvw.dot(coef)    #[3*len(self.bgCoord),1]        
+            ftCoefuvw_init=Buvw.dot(coef)    #[3*len(self.bgCoord),1]   
+            ftCoefuvw_raw=ftCoefuvw_init
             ftCoefuvw=sp.sparse.csr_matrix(ftCoefuvw_raw).transpose()
+            #ftCoefuvw_init=sp.sparse.csr_matrix(ftCoefuvw_raw).transpose()
             #weight
             #sampleWdiag=np.ones(dRdC.shape[0])*w1    #new, test
             #bgWdiag=np.ones(Buvw.shape[0])*w2
@@ -456,6 +461,8 @@ class motionConstrain:
                 minSpacing=self.spacing[:3].min()
                 #maxdCoef=np.abs(dCoef).max()
                 for i in range(dCoef.shape[0]):
+                    if coef[i]<(minSpacing/1e6):
+                        coef[i]=0
                     if coef[i]==0:
                         error=max(error,np.abs(dCoef[i])/minSpacing)
                     else:
@@ -464,9 +471,8 @@ class motionConstrain:
                 coef_backup=coef.copy()
                 dRdC_backup=dRdC.copy()
                 RMSMat_backup=RMSMat.copy()
-                ftCoefuvw_backup=ftCoefuvw_raw.copy()
-                finalRMS_backup = finalRMS
                 
+                finalRMS_backup = finalRMS                
                 ratio=reductionRatio
                 if convergence:
                     if abs(dCoef).max()>self.bsFourier.spacing[:3].min()*convergence:
@@ -481,9 +487,14 @@ class motionConstrain:
                     dRdC[ii,:]*=(2*dogW*dUdX[ii]*weight[0])
                 RMSMat=(dUdX**2)*dogW*weight[0]    #[sampleCoordSize,1]
                 
-                ftCoefuvw_raw=Buvw.dot(coef)    #[3*len(self.BFpoints),1]
-                ftCoefuvw=sp.sparse.csr_matrix(ftCoefuvw).transpose()
-                deltaft = ftCoefuvw_raw-ftCoefuvw_backup
+                if regular=='fast':
+                    ftCoefuvw_backup=ftCoefuvw_raw.copy()
+                    ftCoefuvw_raw=Buvw.dot(coef)    #[3*len(self.BFpoints),1]
+                    ftCoefuvw=sp.sparse.csr_matrix(ftCoefuvw_raw).transpose()
+                    deltaft = ftCoefuvw_raw-ftCoefuvw_backup
+                elif regular=='norm':
+                    ftCoefuvw_raw=Buvw.dot(coef)
+                    deltaft = ftCoefuvw_raw-ftCoefuvw_init
                 
                 finalRMSMat = np.concatenate((RMSMat,deltaft),axis=0)   #[sampleCoordSize+3*len(self.BFpoints),1]
                 finalRMS = finalRMSMat.transpose().dot(finalRMSMat)               
@@ -493,7 +504,9 @@ class motionConstrain:
                     coef=coef_backup.copy()
                     dRdC=dRdC_backup.copy()
                     RMSMat=RMSMat_backup.copy()
-                    ftCoefuvw=ftCoefuvw_backup.copy()
+                    if regular=='fast':
+                        ftCoefuvw_raw=ftCoefuvw_backup.copy()
+                        ftCoefuvw=sp.sparse.csr_matrix(ftCoefuvw_raw).transpose()
                     #error=float('inf')
                     if (lmLambda*lmLambda_incrRatio)<lmLambda_max:
                         lmLambda*=lmLambda_incrRatio
@@ -514,7 +527,7 @@ class motionConstrain:
                         count=maxIteration  #jump out
                         print('RMS didnt change for %d iteration, Fterm %d jump out!!!!!!!!'%(jumpNum,fterm))
                 else:
-                    print('RMS value is decreased!!! deltarms is %.4f, rate: %.4f'%(deltarms,np.abs(deltarms)/finalRMS_backup))
+                    print('RMS value is decreased!!! deltarms is %.4f, rate: %.4f, error is %.8f'%(deltarms,np.abs(deltarms)/finalRMS_backup,error))
                     if ratio>0.9 and lmLambda!=lmLambda_min:
                         if (lmLambda/np.sqrt(lmLambda_incrRatio))>lmLambda_min:
                             lmLambda=lmLambda/np.sqrt(lmLambda_incrRatio)
@@ -526,8 +539,8 @@ class motionConstrain:
                     count+=1
                 
                 rmsList.append(finalRMS)                
-                print('RMS is %.8f, error is %.8f'%(finalRMS,error))
-                print('max(dRdC) is %.6f, max(coef) is %.4f, max(RMSMat) is %.6f'%(np.abs(dRdC).max(),np.abs(coef).max(),RMSMat.max()))
+                #print('RMS is %.8f, error is %.8f'%(finalRMS,error))
+                #print('max(dRdC) is %.6f, max(coef) is %.4f, max(RMSMat) is %.6f'%(np.abs(dRdC).max(),np.abs(coef).max(),RMSMat.max()))
                 if count==maxIteration:
                     print('Maximum iterations reached for matrix: ft=',fterm)
                 if (type(tempSave)!=type(None))and(int(count+1)%25==0):
@@ -542,7 +555,7 @@ class motionConstrain:
         self.rmsList=rmsList.copy()
         return (coefMat,rmsList)
     
-    def solve_velocityWise(self,sampleCoord=None,bgCoord=None,maxError=0.00001,maxIteration=1000,fterm_start=1,weight=[1.,1.],convergence=0.8,reportevery=1000,saveFtermPath=None,tempSave=None,resume=False,lmLambda_init=0.001,lmLambda_incrRatio=5.,lmLambda_max=float('inf'),lmLambda_min=0.):
+    def solve_velocityWise(self,sampleCoord=None,bgCoord=None,regular='norm',maxError=0.00001,maxIteration=1000,fterm_start=1,weight=[1.,1.],convergence=0.8,reportevery=1000,saveFtermPath=None,tempSave=None,resume=False,lmLambda_init=0.001,lmLambda_incrRatio=5.,lmLambda_max=float('inf'),lmLambda_min=0.):
         if sampleCoord==None:
             sampleCoord=self.sampleCoord
         if bgCoord==None:
@@ -589,7 +602,8 @@ class motionConstrain:
             RMSMat=(dUdX**2)*dogW*weight[0]    #[sampleCoordSize,1]
             finalRMS=RMSMat.transpose().dot(RMSMat)
             
-            ftCoefuvw_raw=Buvw.dot(coef)    #[3*len(self.bgCoord),1]
+            ftCoefuvw_init=Buvw.dot(coef)    #[3*len(self.bgCoord),1]   
+            ftCoefuvw_raw=ftCoefuvw_init
             ftCoefuvw=sp.sparse.csr_matrix(ftCoefuvw_raw).transpose()
             print('initial RMS is %.8f, initial max(dRdC) is %.6f, initial max(coef) is %.4f, initial max(RMSMat) is %.6f'%(finalRMS,np.abs(dRdC).max(),np.abs(coef).max(),RMSMat.max()))
             error=float('inf')
@@ -653,9 +667,14 @@ class motionConstrain:
                     dRdC[ii,:]*=(2*dogW*dUdX[ii]*weight[0])
                 RMSMat=(dUdX**2)*dogW*weight[0]    #[sampleCoordSize,1]
                 
-                ftCoefuvw_raw=Buvw.dot(coef)    #[3*len(self.BFpoints),1]
-                ftCoefuvw=sp.sparse.csr_matrix(ftCoefuvw).transpose()
-                deltaft = ftCoefuvw_raw-ftCoefuvw_backup
+                if regular=='fast':
+                    ftCoefuvw_backup=ftCoefuvw_raw.copy()
+                    ftCoefuvw_raw=Buvw.dot(coef)    #[3*len(self.BFpoints),1]
+                    ftCoefuvw=sp.sparse.csr_matrix(ftCoefuvw_raw).transpose()
+                    deltaft = ftCoefuvw_raw-ftCoefuvw_backup
+                elif regular=='norm':
+                    ftCoefuvw_raw=Buvw.dot(coef)
+                    deltaft = ftCoefuvw_raw-ftCoefuvw_init
                 '''
                 if type(weight[1]) in (list, np.array):
                     if len(weight[1])!=3:
@@ -674,7 +693,9 @@ class motionConstrain:
                     coef=coef_backup.copy()
                     dRdC=dRdC_backup.copy()
                     RMSMat=RMSMat_backup.copy()
-                    ftCoefuvw=ftCoefuvw_backup.copy()
+                    if regular=='fast':
+                        ftCoefuvw_raw=ftCoefuvw_backup.copy()
+                        ftCoefuvw=sp.sparse.csr_matrix(ftCoefuvw_raw).transpose()
                     #error=float('inf')
                     if (lmLambda*lmLambda_incrRatio)<lmLambda_max:
                         lmLambda*=lmLambda_incrRatio
@@ -695,7 +716,7 @@ class motionConstrain:
                         count=maxIteration  #jump out
                         print('RMS didnt change for %d iteration, Fterm %d jump out!!!!!!!!'%(jumpNum,fterm))
                 else:
-                    print('RMS value is decreased!!! deltarms is %.4f, rate: %.4f'%(deltarms,np.abs(deltarms)/finalRMS_backup))
+                    print('RMS value is decreased!!! deltarms is %.4f, rate: %.4f, error is %.8f'%(deltarms,np.abs(deltarms)/finalRMS_backup,error))
                     if ratio>0.9 and lmLambda!=lmLambda_min:
                         if (lmLambda/np.sqrt(lmLambda_incrRatio))>lmLambda_min:
                             lmLambda=lmLambda/np.sqrt(lmLambda_incrRatio)
@@ -707,8 +728,8 @@ class motionConstrain:
                     count+=1
                 
                 rmsList.append(finalRMS)                
-                print('RMS is %.8f, error is %.8f'%(finalRMS,error))
-                print('max(dRdC) is %.6f, max(coef) is %.4f, max(RMSMat) is %.6f'%(np.abs(dRdC).max(),np.abs(coef).max(),RMSMat.max()))
+                #print('RMS is %.8f, error is %.8f'%(finalRMS,error))
+                #print('max(dRdC) is %.6f, max(coef) is %.4f, max(RMSMat) is %.6f'%(np.abs(dRdC).max(),np.abs(coef).max(),RMSMat.max()))
                 if count==maxIteration:
                     print('Maximum iterations reached for matrix: ft=',fterm)
                 if (type(tempSave)!=type(None))and(int(count+1)%25==0):
