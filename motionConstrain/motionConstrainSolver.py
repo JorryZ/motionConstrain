@@ -162,7 +162,7 @@ class mcSolver:
         self.spacingDivision=spacingDivision
         print('Sampling done: sampleCoord has %d points, bgCoord has %d points, '%(len(self.motionConstrain.sampleCoord),len(self.motionConstrain.bgCoord)))
         
-    def solve(self,mode='displacementWise',customPath=None,regular=None,maxIteration=None,maxError=None,weight=[1.,1.],fterm_start=1,convergence=None,reportevery=None):
+    def solve(self,mode='displacementWise',customPath=None,regular=None,maxIteration=None,maxError=None,weight=[1.,1.],fterm_start=1,convergence=None):
         if type(weight[1]) in [np.ndarray,list]:
             if len(weight[1])!=3:
                 print('error: if weight[1] is a list or array, please input 3 values for xyz')
@@ -220,7 +220,7 @@ class mcSolver:
         self.motionConstrain.getMatdUdX()
         # errorCalc test
         #self.motionConstrain.errorCalc(savePath=savePath,option='Init')   # divergence error of points
-        self.motionConstrain.solve(method=mode,regular=regular,maxIteration=maxIteration,maxError=maxError,fterm_start=fterm_start,saveFtermPath=saveFtermPath,weight=weight,convergence=convergence,reportevery=reportevery)
+        self.motionConstrain.solve(method=mode,regular=regular,maxIteration=maxIteration,maxError=maxError,fterm_start=fterm_start,saveFtermPath=saveFtermPath,weight=weight,convergence=convergence)
         #self.motionConstrain.errorCalc(savePath=savePath,option='Final')
         self.motionConstrain.coefZeroRemap(remap=0)
         self.motionConstrain.writeFile((savePath+'\\'+self.bsfName+'_coefMat'+'.txt'),coefMat=1)
