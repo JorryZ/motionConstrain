@@ -361,6 +361,7 @@ class motionConstrain:
         regular: 'norm', 'fast', for ftCoefuvw (initial, update)
         Weight: Weight[0] for sampleCoord, Weight[1] for bgCoord
         '''
+        print('method: {0:s}, regular: {1:s}'.format(method,regular))
         self.weight=weight
         if method=='velocityWise':
             coefMat,rmsList=self.solve_velocityWise(sampleCoord=sampleCoord,bgCoord=bgCoord,maxError=maxError,maxIteration=maxIteration,fterm_start=fterm_start,weight=weight,convergence=convergence,reportevery=reportevery,saveFtermPath=saveFtermPath,tempSave=tempSave,resume=resume)
