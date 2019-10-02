@@ -355,7 +355,7 @@ class motionConstrain:
             pass
         return(errorList)
         
-    def solve(self,method='displacementWise',sampleCoord=None,bgCoord=None,regular='norm',maxError=0.00001,maxIteration=1000,fterm_start=1,weight=[1.,1.],convergence=0.8,reportevery=1000,saveFtermPath=None,tempSave=None,resume=False):
+    def solve(self,method='displacementWise',sampleCoord=None,bgCoord=None,regular='norm',maxError=0.0001,maxIteration=1000,fterm_start=1,weight=[1.,1.],convergence=0.8,reportevery=1000,saveFtermPath=None,tempSave=None,resume=False):
         '''
         method: 'displacementWise', 'velocityWise'
         regular: 'norm', 'fast', for ftCoefuvw (initial, update)
@@ -370,7 +370,7 @@ class motionConstrain:
 
         print('motionConstrain.solve completed')
 
-    def solve_displacementWise(self,sampleCoord=None,bgCoord=None,regular='norm',maxError=0.00001,maxIteration=1000,fterm_start=1,weight=[1.,1.],convergence=0.8,reportevery=1000,saveFtermPath=None,tempSave=None,resume=False,lmLambda_init=0.001,lmLambda_incrRatio=5.,lmLambda_max=float('inf'),lmLambda_min=0.):
+    def solve_displacementWise(self,sampleCoord=None,bgCoord=None,regular='norm',maxError=0.0001,maxIteration=1000,fterm_start=1,weight=[1.,1.],convergence=0.8,reportevery=1000,saveFtermPath=None,tempSave=None,resume=False,lmLambda_init=0.001,lmLambda_incrRatio=5.,lmLambda_max=float('inf'),lmLambda_min=0.):
         if sampleCoord==None:
             sampleCoord=self.sampleCoord
         if bgCoord==None:
@@ -555,7 +555,7 @@ class motionConstrain:
         self.rmsList=rmsList.copy()
         return (coefMat,rmsList)
     
-    def solve_velocityWise(self,sampleCoord=None,bgCoord=None,regular='norm',maxError=0.00001,maxIteration=1000,fterm_start=1,weight=[1.,1.],convergence=0.8,reportevery=1000,saveFtermPath=None,tempSave=None,resume=False,lmLambda_init=0.001,lmLambda_incrRatio=5.,lmLambda_max=float('inf'),lmLambda_min=0.):
+    def solve_velocityWise(self,sampleCoord=None,bgCoord=None,regular='norm',maxError=0.0001,maxIteration=1000,fterm_start=1,weight=[1.,1.],convergence=0.8,reportevery=1000,saveFtermPath=None,tempSave=None,resume=False,lmLambda_init=0.001,lmLambda_incrRatio=5.,lmLambda_max=float('inf'),lmLambda_min=0.):
         if sampleCoord==None:
             sampleCoord=self.sampleCoord
         if bgCoord==None:
