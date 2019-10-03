@@ -37,6 +37,9 @@ History:
   Author: jorry.zhengyu@gmail.com         02Oct2019              -V4.2.0 test version
                                                         -motionConstrain test version 4.2.0
                                                         -motionConstrainSolver version 3.2.3                                                         
+  Author: jorry.zhengyu@gmail.com         03Oct2019              -V4.2.1 test version
+                                                        -motionConstrain test version 4.2.1
+                                                        -motionConstrainSolver version 3.3.0
 Requirements:
     numpy
     scipy
@@ -47,7 +50,7 @@ Requirements:
     pickle (optional)
 All rights reserved.
 """
-_version='4.2.0'
+_version='4.2.1'
 print('motionConstrain version',_version)
 
 import os
