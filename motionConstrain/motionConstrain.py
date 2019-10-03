@@ -22,7 +22,7 @@ History:
   Author: jorry.zhengyu@gmail.com         01Oct2019              -V4.1.1 test version, code check
   Author: jorry.zhengyu@gmail.com         01Oct2019              -V4.1.2 test version, func errorCalc modify
   Author: jorry.zhengyu@gmail.com         02Oct2019              -V4.2.0 test version, add regular for ftCoefuvw (norm, fast)
-  Author: jorry.zhengyu@gmail.com         02Oct2019              -V4.2.1 test version, solve_displacementWise, set certain coef to 0
+  Author: jorry.zhengyu@gmail.com         03Oct2019              -V4.2.1 test version, solve_displacementWise, set certain coef to 0
 """
 print('motionConstrain test version 4.2.1')
 
