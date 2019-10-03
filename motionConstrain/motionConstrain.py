@@ -507,6 +507,7 @@ class motionConstrain:
                     coef=coef_backup.copy()
                     dRdC=dRdC_backup.copy()
                     RMSMat=RMSMat_backup.copy()
+                    finalRMS=finalRMS_backup.copy()
                     if regular=='fast':
                         ftCoefuvw_raw=ftCoefuvw_backup.copy()
                         ftCoefuvw=sp.sparse.csr_matrix(ftCoefuvw_raw).transpose()
@@ -655,7 +656,6 @@ class motionConstrain:
                 coef_backup=coef.copy()
                 dRdC_backup=dRdC.copy()
                 RMSMat_backup=RMSMat.copy()
-                ftCoefuvw_backup=ftCoefuvw_raw.copy()
                 finalRMS_backup = finalRMS
                 
                 ratio=reductionRatio
@@ -697,6 +697,7 @@ class motionConstrain:
                     coef=coef_backup.copy()
                     dRdC=dRdC_backup.copy()
                     RMSMat=RMSMat_backup.copy()
+                    finalRMS=finalRMS_backup.copy()
                     if regular=='fast':
                         ftCoefuvw_raw=ftCoefuvw_backup.copy()
                         ftCoefuvw=sp.sparse.csr_matrix(ftCoefuvw_raw).transpose()
