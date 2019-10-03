@@ -474,7 +474,7 @@ class motionConstrain:
                 coef_backup=coef.copy()
                 dRdC_backup=dRdC.copy()
                 RMSMat_backup=RMSMat.copy()                
-                finalRMS_backup = finalRMS     
+                finalRMS_backup = finalRMS.copy()  
                 
                 ratio=reductionRatio
                 if convergence:
@@ -656,7 +656,7 @@ class motionConstrain:
                 coef_backup=coef.copy()
                 dRdC_backup=dRdC.copy()
                 RMSMat_backup=RMSMat.copy()
-                finalRMS_backup = finalRMS
+                finalRMS_backup = finalRMS.copy()
                 
                 ratio=reductionRatio
                 if convergence:
