@@ -23,7 +23,7 @@ History:
   Author: jorry.zhengyu@gmail.com         01Oct2019              -V4.1.2 test version, func errorCalc modify
   Author: jorry.zhengyu@gmail.com         02Oct2019              -V4.2.0 test version, add regular for ftCoefuvw (norm, fast)
   Author: jorry.zhengyu@gmail.com         03Oct2019              -V4.2.1 test version, solve_displacementWise, set certain coef to 0
-  Author: jorry.zhengyu@gmail.com         03Oct2019              -V4.2.2 test version
+  Author: jorry.zhengyu@gmail.com         03Oct2019              -V4.2.2 test version, deltaC = C_i - C_(i-1)
 """
 print('motionConstrain test version 4.2.2')
 
@@ -408,8 +408,8 @@ class motionConstrain:
                 print('Current basic fourier function is cos(%dwt)--------------------'%(fw))
 
             dogW=self.period/2      #coef for divFree equation
-            coef=np.array(coefMat[:,:,:,fterm,:]).reshape(-1,order='F')   #[n*uvw,1]
-            #coef_start=coef.copy()
+            coef_init=np.array(coefMat[:,:,:,fterm,:]).reshape(-1,order='F')   #[n*uvw,1]
+            coef = coef_init.copy()
             dUdX=np.zeros((sampleCoordSize,uvw))    #[sampleCoordSize,uvw]
             dRdC=self.dBdXMat.copy()    #[sampleCoordSize,uvw*n]
             for i in range(uvw):
@@ -423,10 +423,7 @@ class motionConstrain:
             ftCoefuvw_init=Buvw.dot(coef)    #[3*len(self.bgCoord),1]   
             ftCoefuvw_raw=ftCoefuvw_init
             ftCoefuvw=sp.sparse.csr_matrix(ftCoefuvw_raw).transpose()
-            #ftCoefuvw_init=sp.sparse.csr_matrix(ftCoefuvw_raw).transpose()
-            #weight
-            #sampleWdiag=np.ones(dRdC.shape[0])*w1    #new, test
-            #bgWdiag=np.ones(Buvw.shape[0])*w2
+
             print('initial RMS is %.8f, initial max(dRdC) is %.6f, initial max(coef) is %.4f, initial max(RMSMat) is %.6f'%(finalRMS,np.abs(dRdC).max(),np.abs(coef).max(),RMSMat.max()))
             error=float('inf')
             count=0.
@@ -436,17 +433,12 @@ class motionConstrain:
             reductionRatio=1.
             while error>maxError and count<maxIteration:
                 print('iteration of solve_matrix of Fterm %d: %.4f----------'%(fterm,count))
-                #dRdC=np.diag(sampleWdiag).dot(dRdC)
-                #Buvw=np.diag(bgWdiag).dot(Buvw)
-                #print('dRdC and Buvw solved',end='    ')
+
                 sparsedRdC=sp.sparse.csr_matrix(dRdC)
-                sparsedRdC=sp.sparse.vstack([sparsedRdC,Buvw],format='csr')
-                
+                sparsedRdC=sp.sparse.vstack([sparsedRdC,Buvw],format='csr')                
                 R0=dRdC.dot(coef)
                 Rfinal=R0-RMSMat
-                #Rfinal=np.diag(sampleWdiag).dot(Rfinal)
-                #ftCoefuvw=np.diag(bgWdiag).dot(ftCoefuvw)
-                #print('Rfinal and ftCoefuvw solved',end='    ')
+
                 sparseRMSMat=sp.sparse.csc_matrix(Rfinal).transpose()
                 sparseRMSMat=sp.sparse.vstack([sparseRMSMat,ftCoefuvw],format='csc')
                 matA=sparsedRdC.transpose().dot(sparsedRdC)
@@ -456,15 +448,14 @@ class motionConstrain:
                 
                 A=splu(A)
                 newCoef=A.solve(matB)   #[n*uvw,1]
-                #print('newCoef solved')
                 newCoef=newCoef.reshape((-1,))
+                
+                minSpacing=self.spacing[:3].min()
+                coef[np.abs(coef)< minSpacing/1e6] = 0
+                newCoef[np.abs(newCoef)< minSpacing/1e6] = 0
                 dCoef=newCoef-coef  #[n*uvw,1]
                 
                 error=0
-                minSpacing=self.spacing[:3].min()
-                #maxdCoef=np.abs(dCoef).max()
-                #condList = [np.abs(coef)< minSpacing/1e6]
-                coef[np.abs(coef)< minSpacing/1e6] = 0
                 for i in range(dCoef.shape[0]):
                     if coef[i]==0:
                         error=max(error,np.abs(dCoef[i])/minSpacing)
@@ -475,6 +466,7 @@ class motionConstrain:
                 dRdC_backup=dRdC.copy()
                 RMSMat_backup=RMSMat.copy()                
                 finalRMS_backup = finalRMS.copy()  
+                ftCoefuvw_backup=ftCoefuvw_raw.copy()
                 
                 ratio=reductionRatio
                 if convergence:
@@ -490,14 +482,13 @@ class motionConstrain:
                     dRdC[ii,:]*=(2*dogW*dUdX[ii]*weight[0])
                 RMSMat=(dUdX**2)*dogW*weight[0]    #[sampleCoordSize,1]
                 
-                if regular=='fast':
-                    ftCoefuvw_backup=ftCoefuvw_raw.copy()
+                if regular=='fast':                    
                     ftCoefuvw_raw=Buvw.dot(coef)    #[3*len(self.BFpoints),1]
                     ftCoefuvw=sp.sparse.csr_matrix(ftCoefuvw_raw).transpose()
                     deltaft = ftCoefuvw_raw-ftCoefuvw_backup
                 elif regular=='norm':
                     ftCoefuvw_raw=Buvw.dot(coef)
-                    deltaft = ftCoefuvw_raw-ftCoefuvw_init
+                    deltaft = ftCoefuvw_raw-ftCoefuvw_backup
                 
                 finalRMSMat = np.concatenate((RMSMat,deltaft),axis=0)   #[sampleCoordSize+3*len(self.BFpoints),1]
                 finalRMS = finalRMSMat.transpose().dot(finalRMSMat)               
@@ -634,11 +625,13 @@ class motionConstrain:
                 A=splu(A)
                 newCoef=A.solve(matB)   #[n*uvw,1]
                 newCoef=newCoef.reshape((-1,))
+                
+                minSpacing=self.spacing[:3].min()
+                coef[np.abs(coef)< minSpacing/1e6] = 0
+                newCoef[np.abs(newCoef)< minSpacing/1e6] = 0
                 dCoef=newCoef-coef  #[n*uvw,1]
                 
                 error=0
-                minSpacing=self.spacing[:3].min()
-                #maxdCoef=np.abs(dCoef).max()
                 coef[np.abs(coef)< minSpacing/1e6] = 0
                 for i in range(dCoef.shape[0]):
                     if coef[i]==0:
@@ -657,6 +650,7 @@ class motionConstrain:
                 dRdC_backup=dRdC.copy()
                 RMSMat_backup=RMSMat.copy()
                 finalRMS_backup = finalRMS.copy()
+                ftCoefuvw_backup=ftCoefuvw_raw.copy()
                 
                 ratio=reductionRatio
                 if convergence:
@@ -671,14 +665,13 @@ class motionConstrain:
                     dRdC[ii,:]*=(2*dogW*dUdX[ii]*weight[0])
                 RMSMat=(dUdX**2)*dogW*weight[0]    #[sampleCoordSize,1]
                 
-                if regular=='fast':
-                    ftCoefuvw_backup=ftCoefuvw_raw.copy()
+                if regular=='fast':                    
                     ftCoefuvw_raw=Buvw.dot(coef)    #[3*len(self.BFpoints),1]
                     ftCoefuvw=sp.sparse.csr_matrix(ftCoefuvw_raw).transpose()
                     deltaft = ftCoefuvw_raw-ftCoefuvw_backup
                 elif regular=='norm':
                     ftCoefuvw_raw=Buvw.dot(coef)
-                    deltaft = ftCoefuvw_raw-ftCoefuvw_init
+                    deltaft = ftCoefuvw_raw-ftCoefuvw_backup
                 '''
                 if type(weight[1]) in (list, np.array):
                     if len(weight[1])!=3:
