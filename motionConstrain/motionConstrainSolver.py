@@ -21,8 +21,9 @@ History:
   Author: jorry.zhengyu@gmail.com         01Oct2019            -V3.2.2 import motionConstrain
   Author: jorry.zhengyu@gmail.com         02Oct2019            -V3.2.3 modify solve input
   Author: jorry.zhengyu@gmail.com         03Oct2019            -V3.3.0 pointSampling, default spacingDivision=[4.,1.]
+  Author: jorry.zhengyu@gmail.com         03Oct2019            -V3.3.1 solve, default input
 """
-print('motionConstrainSolver version 3.3.0')
+print('motionConstrainSolver version 3.3.1')
 print('Warning: the bsFourier.txt should be in the real time, not in the phantom time, like "f3_t1".')
 
 import os
@@ -163,7 +164,7 @@ class mcSolver:
         self.spacingDivision=spacingDivision
         print('Sampling done: sampleCoord has %d points, bgCoord has %d points, '%(len(self.motionConstrain.sampleCoord),len(self.motionConstrain.bgCoord)))
         
-    def solve(self,mode='displacementWise',customPath=None,regular=None,maxIteration=None,maxError=None,weight=[1.,1.],fterm_start=1,convergence=None):
+    def solve(self,mode='displacementWise',regular='norm',customPath=None,maxError=0.0001,maxIteration=1000,weight=[1.,1.],fterm_start=1,convergence=0.8):
         if type(weight[1]) in [np.ndarray,list]:
             if len(weight[1])!=3:
                 print('error: if weight[1] is a list or array, please input 3 values for xyz')
