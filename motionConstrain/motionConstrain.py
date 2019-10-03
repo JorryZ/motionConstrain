@@ -22,8 +22,9 @@ History:
   Author: jorry.zhengyu@gmail.com         01Oct2019              -V4.1.1 test version, code check
   Author: jorry.zhengyu@gmail.com         01Oct2019              -V4.1.2 test version, func errorCalc modify
   Author: jorry.zhengyu@gmail.com         02Oct2019              -V4.2.0 test version, add regular for ftCoefuvw (norm, fast)
+  Author: jorry.zhengyu@gmail.com         02Oct2019              -V4.2.1 test version, solve_displacementWise, set certain coef to 0
 """
-print('motionConstrain test version 4.2.0')
+print('motionConstrain test version 4.2.1')
 
 import numpy as np
 import math
@@ -461,9 +462,9 @@ class motionConstrain:
                 error=0
                 minSpacing=self.spacing[:3].min()
                 #maxdCoef=np.abs(dCoef).max()
+                #condList = [np.abs(coef)< minSpacing/1e6]
+                coef[np.abs(coef)< minSpacing/1e6] = 0
                 for i in range(dCoef.shape[0]):
-                    if coef[i]<(minSpacing/1e6):
-                        coef[i]=0
                     if coef[i]==0:
                         error=max(error,np.abs(dCoef[i])/minSpacing)
                     else:
@@ -471,9 +472,9 @@ class motionConstrain:
                 
                 coef_backup=coef.copy()
                 dRdC_backup=dRdC.copy()
-                RMSMat_backup=RMSMat.copy()
+                RMSMat_backup=RMSMat.copy()                
+                finalRMS_backup = finalRMS     
                 
-                finalRMS_backup = finalRMS                
                 ratio=reductionRatio
                 if convergence:
                     if abs(dCoef).max()>self.bsFourier.spacing[:3].min()*convergence:
@@ -636,6 +637,7 @@ class motionConstrain:
                 error=0
                 minSpacing=self.spacing[:3].min()
                 #maxdCoef=np.abs(dCoef).max()
+                coef[np.abs(coef)< minSpacing/1e6] = 0
                 for i in range(dCoef.shape[0]):
                     if coef[i]==0:
                         error=max(error,np.abs(dCoef[i])/minSpacing)
