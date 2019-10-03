@@ -20,8 +20,9 @@ History:
   Author: jorry.zhengyu@gmail.com         01Oct2019            -V3.2.1 add weight for Buvw
   Author: jorry.zhengyu@gmail.com         01Oct2019            -V3.2.2 import motionConstrain
   Author: jorry.zhengyu@gmail.com         02Oct2019            -V3.2.3 modify solve input
+  Author: jorry.zhengyu@gmail.com         03Oct2019            -V3.3.0 pointSampling, default spacingDivision=[4.,1.]
 """
-print('motionConstrainSolver version 3.2.3')
+print('motionConstrainSolver version 3.3.0')
 print('Warning: the bsFourier.txt should be in the real time, not in the phantom time, like "f3_t1".')
 
 import os
@@ -69,7 +70,7 @@ class mcSolver:
         self.reShape=reShape
         self.sizeSingleMat=sizeSingleMat
         
-    def pointSampling(self,sampleSource=None,stlName=None,vtkName=None,dimlen=None,sampleRatio=[0.3,0.4,3.,3.5],spacingDivision=[5.,1.5],bgGlobalField=True):
+    def pointSampling(self,sampleSource=None,stlName=None,vtkName=None,dimlen=None,sampleRatio=[0.3,0.4,0.8,1.2],spacingDivision=[4.,1.],bgGlobalField=True):
         self.dimlen=dimlen
         self.sampleSource=sampleSource
         self.bgGlobalField=bgGlobalField
@@ -101,7 +102,7 @@ class mcSolver:
                         print('Please make a finer STL mesh!!!')
                         sys.exit()
                     self.motionConstrain.samplePointsFromSource(sampleSource=sampleSource,sampleData=sampleData,skip=skip)
-            print('sampleSource: stl mask!! bgCoord spacingDivision: ',spacingDivision[1])
+            print('sampleSource: stl mask!! spacingDivision: ',spacingDivision)
         
         elif sampleSource=='vtk':
             try:
@@ -124,10 +125,10 @@ class mcSolver:
                     spacingDivision[1]+=0.1
                     self.motionConstrain.samplePointsFromSource(sampleSource=sampleSource,sampleData=sampleData,spacingDivision=spacingDivision,bgGlobalField=bgGlobalField)
                 while(len(self.motionConstrain.sampleCoord)/len(self.motionConstrain.bgCoord)>sampleRatio[1]):
-                    spacingDivision[0]-=0.2
+                    spacingDivision[0]-=0.1
                     self.motionConstrain.samplePointsFromSource(sampleSource=sampleSource,sampleData=sampleData,spacingDivision=spacingDivision,bgGlobalField=bgGlobalField)
                 while(len(self.motionConstrain.sampleCoord)/len(self.motionConstrain.bgCoord)<sampleRatio[0]):
-                    spacingDivision[0]+=0.2
+                    spacingDivision[0]+=0.1
                     self.motionConstrain.samplePointsFromSource(sampleSource=sampleSource,sampleData=sampleData,spacingDivision=spacingDivision,bgGlobalField=bgGlobalField)
             print('sampleSource: vtk mask!! spacingDivision: ',spacingDivision)
         
