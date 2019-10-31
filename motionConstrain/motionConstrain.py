@@ -62,7 +62,6 @@ class motionConstrain:
         
         self.method=None
         self.dCoefMat=[]   # [point,FT,uvw]
-        self.weight=None
         self.savePath=None
         self.rmsList=[]
         self.errorList=None     # divergence error of points
@@ -370,7 +369,6 @@ class motionConstrain:
         '''
         print('method: {0:s}, regular: {1:s}'.format(method,regular))
         self.weight=weight
-        self.method=method
         if method=='ICP-disp' or  method=='ICP-velc':
             mode=method[-4:]
             coefMat,rmsList=self.incompressibility(mode=mode,sampleCoord=sampleCoord,bgCoord=bgCoord,maxError=maxError,maxIteration=maxIteration,fterm_start=fterm_start,weight=weight,convergence=convergence,reportevery=reportevery,saveFtermPath=saveFtermPath,tempSave=tempSave,resume=resume)
@@ -683,5 +681,3 @@ class motionConstrain:
             self.points.append(loadMatrix[n,:3].copy())
             if n<coeflen:
                 self.pointsCoef.append(loadMatrix[n,3:].reshape((-1,3),order='F'))
-
-        
