@@ -21,9 +21,9 @@ History:
   Author: jorry.zhengyu@gmail.com         01Oct2019            -V3.2.2 import motionConstrain
   Author: jorry.zhengyu@gmail.com         02Oct2019            -V3.2.3 modify solve input
   Author: jorry.zhengyu@gmail.com         03Oct2019            -V3.3.0 pointSampling, default spacingDivision=[4.,1.]
-  Author: jorry.zhengyu@gmail.com         03Oct2019            -V3.3.1 solve, default input
+  Author: jorry.zhengyu@gmail.com         30Oct2019            -V5.0.0 release version
 """
-print('motionConstrainSolver version 3.3.1')
+print('motionConstrainSolver version 5.0.0')
 print('Warning: the bsFourier.txt should be in the real time, not in the phantom time, like "f3_t1".')
 
 import os
@@ -49,6 +49,7 @@ class mcSolver:
         self.vtkName=None                       #'gt.vtk'
         self.dimlen=None                        #{'x':0.1676,'y':0.1676,'z':1.2794}
         
+        self.sampleRatio=None
         self.spacingDivision=None
         self.bgGlobalField=None                 # True means the background part includes sample part, if False add extra in the end of folder
         self.finalShape=None
@@ -71,7 +72,8 @@ class mcSolver:
         self.reShape=reShape
         self.sizeSingleMat=sizeSingleMat
         
-    def pointSampling(self,sampleSource=None,stlName=None,vtkName=None,dimlen=None,sampleRatio=[0.3,0.4,0.8,1.2],spacingDivision=[4.,1.],bgGlobalField=True):
+    def pointSampling(self,sampleSource=None,stlName=None,vtkName=None,dimlen=None,sampleRatio=[0.3,0.4,0.8,1.2],spacingDivision=[3.5,1.],bgGlobalField=True):
+        #sampleRatio=[0.3,0.4,0.8,1.2]
         self.dimlen=dimlen
         self.sampleSource=sampleSource
         self.bgGlobalField=bgGlobalField
@@ -80,30 +82,32 @@ class mcSolver:
         if sampleSource=='stl':
             #sample points from stl file
             try:
-                sampleSourcePath=self.casePath+stlName
+                sampleSourcePath=self.casePath+'\\'+stlName
             except:
                 print('Warning: source of sample part from STL file, please specify a STL file!')
                 sys.exit()
             sampleData=trimesh.load(sampleSourcePath)
-            skip=4
-            self.motionConstrain.samplePointsFromSource(sampleSource=sampleSource,sampleData=sampleData,skip=skip)
+            #skip=4
+            spacingDivision[0]=int(spacingDivision[0])      #skip of points
+            self.motionConstrain.samplePointsFromSource(sampleSource=sampleSource,sampleData=sampleData,skip=spacingDivision[0])
             if type(sampleRatio)!=type(None):
                 while(len(self.motionConstrain.bgCoord)/self.sizeSingleMat>sampleRatio[3]):
-                    spacingDivision[1]-=0.1
+                    #spacingDivision[1]-=0.1
+                    spacingDivision[1]=round((spacingDivision[1]-0.1),1)
                     self.motionConstrain.bgCoord=np.array(self.motionConstrain.bsFourier.samplePoints(spacingDivision=spacingDivision[1],gap=0))
                 while(len(self.motionConstrain.bgCoord)/self.sizeSingleMat<sampleRatio[2]):
-                    spacingDivision[1]+=0.1
+                    spacingDivision[1]=round((spacingDivision[1]+0.1),1)
                     self.motionConstrain.bgCoord=np.array(self.motionConstrain.bsFourier.samplePoints(spacingDivision=spacingDivision[1],gap=0))
-                while(len(self.motionConstrain.motionConstrain.sampleCoord)/len(self.motionConstrain.bgCoord)>sampleRatio[1]):
-                    skip+=1
-                    self.motionConstrain.samplePointsFromSource(sampleSource=sampleSource,sampleData=sampleData,skip=skip)
+                while(len(self.motionConstrain.sampleCoord)/len(self.motionConstrain.bgCoord)>sampleRatio[1]):
+                    spacingDivision[0]+=1
+                    self.motionConstrain.samplePointsFromSource(sampleSource=sampleSource,sampleData=sampleData,skip=spacingDivision[0])
                 while(len(self.motionConstrain.sampleCoord)/len(self.motionConstrain.bgCoord)<sampleRatio[0]):
-                    skip-=1
-                    if skip==0:
+                    spacingDivision[0]-=1
+                    if spacingDivision[0]==0:
                         print('Please make a finer STL mesh!!!')
                         sys.exit()
-                    self.motionConstrain.samplePointsFromSource(sampleSource=sampleSource,sampleData=sampleData,skip=skip)
-            print('sampleSource: stl mask!! spacingDivision: ',spacingDivision)
+                    self.motionConstrain.samplePointsFromSource(sampleSource=sampleSource,sampleData=sampleData,skip=spacingDivision[0])
+            #print('sampleSource: stl mask!! spacingDivision: ',spacingDivision)
         
         elif sampleSource=='vtk':
             try:
@@ -120,31 +124,31 @@ class mcSolver:
             self.motionConstrain.samplePointsFromSource(sampleSource=sampleSource,sampleData=sampleData,spacingDivision=spacingDivision,bgGlobalField=bgGlobalField)
             if type(sampleRatio)!=type(None):
                 while(len(self.motionConstrain.bgCoord)/self.sizeSingleMat>sampleRatio[3]):
-                    spacingDivision[1]-=0.1
+                    spacingDivision[1]=round((spacingDivision[1]-0.1),1)
                     self.motionConstrain.samplePointsFromSource(sampleSource=sampleSource,sampleData=sampleData,spacingDivision=spacingDivision,bgGlobalField=bgGlobalField)
                 while(len(self.motionConstrain.bgCoord)/self.sizeSingleMat<sampleRatio[2]):
-                    spacingDivision[1]+=0.1
+                    spacingDivision[1]=round((spacingDivision[1]+0.1),1)
                     self.motionConstrain.samplePointsFromSource(sampleSource=sampleSource,sampleData=sampleData,spacingDivision=spacingDivision,bgGlobalField=bgGlobalField)
                 while(len(self.motionConstrain.sampleCoord)/len(self.motionConstrain.bgCoord)>sampleRatio[1]):
-                    spacingDivision[0]-=0.1
+                    spacingDivision[0]=round((spacingDivision[0]-0.1),1)
                     self.motionConstrain.samplePointsFromSource(sampleSource=sampleSource,sampleData=sampleData,spacingDivision=spacingDivision,bgGlobalField=bgGlobalField)
                 while(len(self.motionConstrain.sampleCoord)/len(self.motionConstrain.bgCoord)<sampleRatio[0]):
-                    spacingDivision[0]+=0.1
+                    spacingDivision[0]=round((spacingDivision[0]+0.1),1)
                     self.motionConstrain.samplePointsFromSource(sampleSource=sampleSource,sampleData=sampleData,spacingDivision=spacingDivision,bgGlobalField=bgGlobalField)
-            print('sampleSource: vtk mask!! spacingDivision: ',spacingDivision)
+            #print('sampleSource: vtk mask!! spacingDivision: ',spacingDivision)
         
         elif sampleSource=='gm':
             if type(sampleRatio)!=type(None):
                 while(len(self.motionConstrain.bgCoord)/self.sizeSingleMat>sampleRatio[3]):
-                    spacingDivision[1]-=0.1
+                    spacingDivision[1]=round((spacingDivision[1]-0.1),1)
                     self.motionConstrain.bgCoord=np.array(self.motionConstrain.bsFourier.samplePoints(spacingDivision=spacingDivision[1],gap=0))
                 while(len(self.motionConstrain.bgCoord)/self.sizeSingleMat<sampleRatio[2]):
-                    spacingDivision[1]+=0.1
+                    spacingDivision[1]=round((spacingDivision[1]+0.1),1)
                     self.motionConstrain.bgCoord=np.array(self.motionConstrain.bsFourier.samplePoints(spacingDivision=spacingDivision[1],gap=0))
                 spacingDivision[0]=spacingDivision[1]
                 self.motionConstrain.sampleCoord=self.motionConstrain.samplePoints(spacingDivision=spacingDivision[0],gap=0)
                 while(len(self.motionConstrain.sampleCoord)/len(self.motionConstrain.bgCoord)<sampleRatio[1]):
-                    spacingDivision[0]+=0.1
+                    spacingDivision[0]=round((spacingDivision[0]+0.1),1)
                     self.motionConstrain.sampleCoord=self.motionConstrain.samplePoints(spacingDivision=spacingDivision[0],gap=0)
                 '''
                 if type(customSpacingDivision)!=type(None):
@@ -160,20 +164,23 @@ class mcSolver:
             else:
                 self.motionConstrain.sampleCoord=np.array(self.motionConstrain.bsFourier.samplePoints(spacingDivision=spacingDivision[0],gap=0))
                 self.motionConstrain.bgCoord=np.array(self.motionConstrain.bsFourier.samplePoints(spacingDivision=spacingDivision[1],gap=0))
-            print('sampleSource: global mask!! spacingDivision: !!',spacingDivision)
+            #print('sampleSource: global mask!! spacingDivision: !!',spacingDivision)
+        self.sampleRatio=[len(self.motionConstrain.sampleCoord)/len(self.motionConstrain.bgCoord),len(self.motionConstrain.bgCoord)/self.sizeSingleMat]
         self.spacingDivision=spacingDivision
-        print('Sampling done: sampleCoord has %d points, bgCoord has %d points, '%(len(self.motionConstrain.sampleCoord),len(self.motionConstrain.bgCoord)))
+        self.motionConstrain.spacingDivision = spacingDivision
+        print('Sampling done: sampleCoord has %d points, bgCoord has %d points, sampleRatio is %.2f and %.2f'%(len(self.motionConstrain.sampleCoord),len(self.motionConstrain.bgCoord),self.sampleRatio[0],self.sampleRatio[1]))
         
-    def solve(self,mode='displacementWise',regular='norm',customPath=None,maxError=0.0001,maxIteration=1000,weight=[1.,1.],fterm_start=1,convergence=0.8):
+    def solve(self,method='ICP-disp',regular='norm',customPath=None,maxError=0.0001,maxIteration=1000,weight=[1.,1.],fterm_start=1,convergence=0.5):
         if type(weight[1]) in [np.ndarray,list]:
             if len(weight[1])!=3:
                 print('error: if weight[1] is a list or array, please input 3 values for xyz')
-                sys.exit()
+                sys.exit()        
             else:
                 weight[0]=np.sqrt(weight[0])
                 weight[1]=np.sqrt(weight[1])
         else:
             weight=np.sqrt(weight)
+        
         if self.reShape==True:
             sampleCoord=self.motionConstrain.sampleCoord.copy()
             bgCoord=self.motionConstrain.bgCoord.copy()
@@ -199,11 +206,16 @@ class mcSolver:
                 #sys.exit()
             self.motionConstrain.sampleCoord=sampleCoord.copy()
             self.motionConstrain.bgCoord=bgCoord.copy()
-        
-        if self.bgGlobalField==True:
-            savePath=self.casePath+'\\'+'{0:s}_{1:.1f}-{2:.1f}_w{3:.1f}-{4:.1f}_{5:d}-{6:d}-{7:d}_{8:s}'.format(mode,self.spacingDivision[0],self.spacingDivision[1],weight[0],weight[1],self.finalShape[0],self.finalShape[1],self.finalShape[2],self.sampleSource)
+        #savePath: mode, mask, sampleRatio (R), weights, grid size
+        if self.finalShape[0]==self.finalShape[1] and self.finalShape[0]==self.finalShape[2]:
+            savePath=self.casePath+'\\'+'{0:s}_{6:s}_R{1:.2f}-{2:.2f}_W{3:.1f}-{4:.1f}_G{5:d}'.format(method,self.sampleRatio[0],self.sampleRatio[1],weight[0]**2,weight[1]**2,self.finalShape[0],self.sampleSource)
         else:
-            savePath=self.casePath+'\\'+'{0:s}_{1:.1f}-{2:.1f}_w{3:.1f}-{4:.1f}_{5:d}-{6:d}-{7:d}_{8:s}_extra'.format(mode,self.spacingDivision[0],self.spacingDivision[1],weight[0],weight[1],self.finalShape[0],self.finalShape[1],self.finalShape[2],self.sampleSource)
+            savePath=self.casePath+'\\'+'{0:s}_{8:s}_R{1:.2f}-{2:.2f}_W{3:.1f}-{4:.1f}_G{5:d}-{6:d}-{7:d}'.format(method,self.sampleRatio[0],self.sampleRatio[1],weight[0]**2,weight[1]**2,self.finalShape[0],self.finalShape[1],self.finalShape[2],self.sampleSource)
+        
+        if self.bgGlobalField==False:
+            savePath=savePath+'_extra'
+        if regular=='fast':
+            savePath=savePath+'_fast'
         try:
             savePath=savePath+'_'+customPath+'\\'
             print('CustomPath setting: ',customPath)
@@ -222,7 +234,7 @@ class mcSolver:
         self.motionConstrain.getMatdUdX()
         # errorCalc test
         #self.motionConstrain.errorCalc(savePath=savePath,option='Init')   # divergence error of points
-        self.motionConstrain.solve(method=mode,regular=regular,maxIteration=maxIteration,maxError=maxError,fterm_start=fterm_start,saveFtermPath=saveFtermPath,weight=weight,convergence=convergence)
+        self.motionConstrain.solve(method=method,regular=regular,maxIteration=maxIteration,maxError=maxError,fterm_start=fterm_start,saveFtermPath=saveFtermPath,weight=weight,convergence=convergence)
         #self.motionConstrain.errorCalc(savePath=savePath,option='Final')
         self.motionConstrain.coefZeroRemap(remap=0)
         self.motionConstrain.writeFile((savePath+'\\'+self.bsfName+'_coefMat'+'.txt'),coefMat=1)
