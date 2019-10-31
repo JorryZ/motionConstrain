@@ -170,7 +170,7 @@ class mcSolver:
         self.motionConstrain.spacingDivision = spacingDivision
         print('Sampling done: sampleCoord has %d points, bgCoord has %d points, sampleRatio is %.2f and %.2f'%(len(self.motionConstrain.sampleCoord),len(self.motionConstrain.bgCoord),self.sampleRatio[0],self.sampleRatio[1]))
         
-    def solve(self,method='ICP-disp',regular='norm',customPath=None,maxError=0.0001,maxIteration=1000,weight=[1.,1.],fterm_start=1,convergence=0.5):
+    def solve(self,method='ICP-disp',regular='norm',customPath=None,maxError=0.0001,maxIteration=1000,weight=[1.,1.],fterm_start=1,convergence=0.5,test=False):
         if type(weight[1]) in [np.ndarray,list]:
             if len(weight[1])!=3:
                 print('error: if weight[1] is a list or array, please input 3 values for xyz')
@@ -237,13 +237,14 @@ class mcSolver:
         self.motionConstrain.solve(method=method,regular=regular,maxIteration=maxIteration,maxError=maxError,fterm_start=fterm_start,saveFtermPath=saveFtermPath,weight=weight,convergence=convergence)
         #self.motionConstrain.errorCalc(savePath=savePath,option='Final')
         self.motionConstrain.coefZeroRemap(remap=0)
-        self.motionConstrain.writeFile((savePath+'\\'+self.bsfName+'_coefMat'+'.txt'),coefMat=1)
-        self.motionConstrain.writeFile((savePath+'\\'+self.bsfName+'_dCoefMat'+'.txt'),dCoefMat=1)
-        np.savetxt((savePath+'\\'+self.bsfName+'_rmsList'+'.txt'),self.motionConstrain.rmsList,fmt='%.8f',delimiter=' ')
+        self.motionConstrain.writeFile((savePath+'\\'+self.bsfName+'_'+method+'.txt'),coefMat=1)
         try:
             if type(self.motionConstrain.dimlen)!=type(None):
                 with open((savePath+'\\'+'scale_xyz.txt'), 'w') as f:
                     json.dump(self.motionConstrain.dimlen, f)
         except:
             pass
+        if test==True:
+            self.motionConstrain.writeFile((savePath+'\\'+self.bsfName+'_dCoefMat'+'.txt'),dCoefMat=1)
+            np.savetxt((savePath+'\\'+self.bsfName+'_rmsList'+'.txt'),self.motionConstrain.rmsList,fmt='%.8f',delimiter=' ')
         print('One case done, savepath:  ',savePath,'  *_*_*_*_*_*')
