@@ -23,10 +23,12 @@ History:
   Author: jorry.zhengyu@gmail.com         01Oct2019              -V4.1.2 test version, func errorCalc modify
   Author: jorry.zhengyu@gmail.com         02Oct2019              -V4.2.0 test version, add regular for ftCoefuvw (norm, fast)
   Author: jorry.zhengyu@gmail.com         03Oct2019              -V4.2.1 test version, solve_displacementWise, set certain coef to 0
-  Author: jorry.zhengyu@gmail.com         03Oct2019              -V4.2.2 test version, deltaC = C_i - C_(i-1)
+  Author: jorry.zhengyu@gmail.com         04Oct2019              -V4.2.2 test version, deltarms calculation
+  Author: jorry.zhengyu@gmail.com         10Oct2019              -V4.3.0 test version, calculate deltaC, normalize RMSMat by period and point number by 1/spacingDivision
+  Author: jorry.zhengyu@gmail.com         30Oct2019              -V5.0.0 release version
 """
-print('motionConstrain test version 4.2.2')
-
+print('motionConstrain test version 5.0.0')
+import sys
 import numpy as np
 import math
 import scipy as sp
@@ -51,11 +53,14 @@ class motionConstrain:
         self.dimlen=None    #physical length of each (x,y,z) pixel
         self.sampleCoord =None
         self.bgCoord=None  #imgReg BsplineFourier result
+        self.spacingDivision= None
+        
         self.bsFourier=BsplineFourier.BsplineFourier()
         self.BMat=[]    #[point,n]
         self.dBdXMat=[]
         self.dUdXMat=[] # [point, TF, uvw]
         
+        self.method=None
         self.dCoefMat=[]   # [point,FT,uvw]
         self.weight=None
         self.savePath=None
@@ -357,23 +362,21 @@ class motionConstrain:
             pass
         return(errorList)
         
-    def solve(self,method='displacementWise',sampleCoord=None,bgCoord=None,regular='norm',maxError=0.0001,maxIteration=1000,fterm_start=1,weight=[1.,1.],convergence=0.8,reportevery=1000,saveFtermPath=None,tempSave=None,resume=False):
+    def solve(self,method='ICP-disp',sampleCoord=None,bgCoord=None,regular='norm',maxError=0.0001,maxIteration=1000,fterm_start=1,weight=[1.,1.],convergence=0.8,reportevery=1000,saveFtermPath=None,tempSave=None,resume=False):
         '''
-        method: 'displacementWise', 'velocityWise'
+        method: 'ICP-disp', 'ICP-velc' (incompressible - displacementWise/velocityWise)
         regular: 'norm', 'fast', for ftCoefuvw (initial, update)
         Weight: Weight[0] for sampleCoord, Weight[1] for bgCoord
         '''
         print('method: {0:s}, regular: {1:s}'.format(method,regular))
         self.weight=weight
-        if method=='velocityWise':
-            coefMat,rmsList=self.solve_velocityWise(sampleCoord=sampleCoord,bgCoord=bgCoord,maxError=maxError,maxIteration=maxIteration,fterm_start=fterm_start,weight=weight,convergence=convergence,reportevery=reportevery,saveFtermPath=saveFtermPath,tempSave=tempSave,resume=resume)
-
-        elif method=='displacementWise':
-            coefMat,rmsList=self.solve_displacementWise(sampleCoord=sampleCoord,bgCoord=bgCoord,maxError=maxError,maxIteration=maxIteration,fterm_start=fterm_start,weight=weight,convergence=convergence,reportevery=reportevery,saveFtermPath=saveFtermPath,tempSave=tempSave,resume=resume)
-
+        self.method=method
+        if method=='ICP-disp' or  method=='ICP-velc':
+            mode=method[-4:]
+            coefMat,rmsList=self.incompressibility(mode=mode,sampleCoord=sampleCoord,bgCoord=bgCoord,maxError=maxError,maxIteration=maxIteration,fterm_start=fterm_start,weight=weight,convergence=convergence,reportevery=reportevery,saveFtermPath=saveFtermPath,tempSave=tempSave,resume=resume)
         print('motionConstrain.solve completed')
 
-    def solve_displacementWise(self,sampleCoord=None,bgCoord=None,regular='norm',maxError=0.0001,maxIteration=1000,fterm_start=1,weight=[1.,1.],convergence=0.8,reportevery=1000,saveFtermPath=None,tempSave=None,resume=False,lmLambda_init=0.001,lmLambda_incrRatio=5.,lmLambda_max=float('inf'),lmLambda_min=0.):
+    def incompressibility(self,mode=None,sampleCoord=None,bgCoord=None,regular='norm',maxError=0.0001,maxIteration=1000,weight=[1.,1.],fterm_start=1,convergence=0.5,reportevery=1000,saveFtermPath=None,tempSave=None,resume=False,lmLambda_init=0.001,lmLambda_incrRatio=5.,lmLambda_max=float('inf'),lmLambda_min=0.):
         if sampleCoord==None:
             sampleCoord=self.sampleCoord
         if bgCoord==None:
@@ -399,192 +402,22 @@ class motionConstrain:
         Buvw=sp.sparse.csr_matrix(Buvw)
         #matW=sp.sparse.diags(np.ones(len(points)))
         for fterm in range(fterm_start,ft):
-            print('solve_displacementWise......')
+            print('ICP_displacementWise......')
             if fterm>(ft//2):
                 fw=fterm-ft//2
-                print('Current basic fourier function is sin(%dwt)--------------------'%(fw))
+                print('Current basic fourier function is sin(%dwt)********************************'%(fw))
             else:
                 fw=fterm
-                print('Current basic fourier function is cos(%dwt)--------------------'%(fw))
-
-            dogW=self.period/2      #coef for divFree equation
-            coef_init=np.array(coefMat[:,:,:,fterm,:]).reshape(-1,order='F')   #[n*uvw,1]
-            coef = coef_init.copy()
-            dUdX=np.zeros((sampleCoordSize,uvw))    #[sampleCoordSize,uvw]
-            dRdC=self.dBdXMat.copy()    #[sampleCoordSize,uvw*n]
-            for i in range(uvw):
-                dUdX[:,i]=dBdXMat[:,i*n:(i+1)*n].dot(coef[i*n:(i+1)*n])
-            dUdX=np.sum(dUdX,axis=1)
-            for ii in range(sampleCoordSize):
-                dRdC[ii,:]*=(2*dogW*dUdX[ii]*weight[0])
-            RMSMat=(dUdX**2)*dogW*weight[0]    #[sampleCoordSize,1]
-            finalRMS=RMSMat.transpose().dot(RMSMat)
+                print('Current basic fourier function is cos(%dwt)********************************'%(fw))
             
-            ftCoefuvw_init=Buvw.dot(coef)    #[3*len(self.bgCoord),1]   
-            ftCoefuvw_raw=ftCoefuvw_init
-            ftCoefuvw=sp.sparse.csr_matrix(ftCoefuvw_raw).transpose()
-
-            print('initial RMS is %.8f, initial max(dRdC) is %.6f, initial max(coef) is %.4f, initial max(RMSMat) is %.6f'%(finalRMS,np.abs(dRdC).max(),np.abs(coef).max(),RMSMat.max()))
-            error=float('inf')
-            count=0.
-            jumpFlag=0
-    
-            lmLambda=lmLambda_init
-            reductionRatio=1.
-            while error>maxError and count<maxIteration:
-                print('iteration of solve_matrix of Fterm %d: %.4f----------'%(fterm,count))
-
-                sparsedRdC=sp.sparse.csr_matrix(dRdC)
-                sparsedRdC=sp.sparse.vstack([sparsedRdC,Buvw],format='csr')                
-                R0=dRdC.dot(coef)
-                Rfinal=R0-RMSMat
-
-                sparseRMSMat=sp.sparse.csc_matrix(Rfinal).transpose()
-                sparseRMSMat=sp.sparse.vstack([sparseRMSMat,ftCoefuvw],format='csc')
-                matA=sparsedRdC.transpose().dot(sparsedRdC)
-                temp=sp.sparse.diags(matA.diagonal())
-                A=sp.sparse.csc_matrix(matA+lmLambda*temp)     #lavenberg-Marquardt correction, add lmLambda*diagonals to the diagonal of matA
-                matB=sparsedRdC.transpose().dot(sparseRMSMat).toarray()
-                
-                A=splu(A)
-                newCoef=A.solve(matB)   #[n*uvw,1]
-                newCoef=newCoef.reshape((-1,))
-                
-                minSpacing=self.spacing[:3].min()
-                coef[np.abs(coef)< minSpacing/1e6] = 0
-                newCoef[np.abs(newCoef)< minSpacing/1e6] = 0
-                dCoef=newCoef-coef  #[n*uvw,1]
-                
-                error=0
-                for i in range(dCoef.shape[0]):
-                    if coef[i]==0:
-                        error=max(error,np.abs(dCoef[i])/minSpacing)
-                    else:
-                        error=max(error,np.abs(dCoef[i])/np.abs(coef[i]))
-                
-                coef_backup=coef.copy()
-                dRdC_backup=dRdC.copy()
-                RMSMat_backup=RMSMat.copy()                
-                finalRMS_backup = finalRMS.copy()  
-                ftCoefuvw_backup=ftCoefuvw_raw.copy()
-                
-                ratio=reductionRatio
-                if convergence:
-                    if abs(dCoef).max()>self.bsFourier.spacing[:3].min()*convergence:
-                        ratio=min(ratio,self.bsFourier.spacing[:3].min()*convergence/abs(dCoef).max())
-                
-                coef+=ratio*dCoef
-                dUdX=self.getMatdUdX(coef=coef,order='uvw') #[sampleCoordSize,uvw]
-                dUdX=np.sum(dUdX,axis=1)
-                dRdC=self.dBdXMat.copy()    #[sampleCoordSize,uvw*n]
-                
-                for ii in range(sampleCoordSize):
-                    dRdC[ii,:]*=(2*dogW*dUdX[ii]*weight[0])
-                RMSMat=(dUdX**2)*dogW*weight[0]    #[sampleCoordSize,1]
-                
-                if regular=='fast':                    
-                    ftCoefuvw_raw=Buvw.dot(coef)    #[3*len(self.BFpoints),1]
-                    ftCoefuvw=sp.sparse.csr_matrix(ftCoefuvw_raw).transpose()
-                    deltaft = ftCoefuvw_raw-ftCoefuvw_backup
-                elif regular=='norm':
-                    ftCoefuvw_raw=Buvw.dot(coef)
-                    deltaft = ftCoefuvw_raw-ftCoefuvw_backup
-                
-                finalRMSMat = np.concatenate((RMSMat,deltaft),axis=0)   #[sampleCoordSize+3*len(self.BFpoints),1]
-                finalRMS = finalRMSMat.transpose().dot(finalRMSMat)               
-                deltarms = finalRMS - finalRMS_backup
-                if deltarms>0.:
-                    print('RMS value increases!!! deltarms is %.4f'%(deltarms))
-                    coef=coef_backup.copy()
-                    dRdC=dRdC_backup.copy()
-                    RMSMat=RMSMat_backup.copy()
-                    finalRMS=finalRMS_backup.copy()
-                    if regular=='fast':
-                        ftCoefuvw_raw=ftCoefuvw_backup.copy()
-                        ftCoefuvw=sp.sparse.csr_matrix(ftCoefuvw_raw).transpose()
-                    #error=float('inf')
-                    if (lmLambda*lmLambda_incrRatio)<lmLambda_max:
-                        lmLambda*=lmLambda_incrRatio
-                    else:
-                        lmLambda=lmLambda_max
-                        reductionRatio*=0.8
-                    count+=0.02
-                    
-                    if jumpFlag==0:
-                        jumpValue=np.sum(RMSMat)
-                        jumpFlag=1
-                        jumpNum=0
-                    if jumpValue==np.sum(RMSMat):
-                        jumpNum+=1
-                    else:
-                        jumpFlag==0
-                    if jumpNum==20:
-                        count=maxIteration  #jump out
-                        print('RMS didnt change for %d iteration, Fterm %d jump out!!!!!!!!'%(jumpNum,fterm))
-                else:
-                    print('RMS value is decreased!!! deltarms is %.4f, rate: %.4f, error is %.8f'%(deltarms,np.abs(deltarms)/finalRMS_backup,error))
-                    if ratio>0.9 and lmLambda!=lmLambda_min:
-                        if (lmLambda/np.sqrt(lmLambda_incrRatio))>lmLambda_min:
-                            lmLambda=lmLambda/np.sqrt(lmLambda_incrRatio)
-                        else:
-                            lmLambda=lmLambda_min
-                    elif reductionRatio<0.9:
-                        reductionRatio*=1.1
-                    #rms=np.sum(RMSMat)  #new rms
-                    count+=1
-                
-                rmsList.append(finalRMS)                
-                #print('RMS is %.8f, error is %.8f'%(finalRMS,error))
-                #print('max(dRdC) is %.6f, max(coef) is %.4f, max(RMSMat) is %.6f'%(np.abs(dRdC).max(),np.abs(coef).max(),RMSMat.max()))
-                if count==maxIteration:
-                    print('Maximum iterations reached for matrix: ft=',fterm)
-                if (type(tempSave)!=type(None))and(int(count+1)%25==0):
-                    self.writeSamplingResults(tempSave)
-                    print('tempSave of matrix (ft=',fterm,') and iteration ',count)
-            coefMat[:,:,:,fterm,:]=coef.reshape((*coefMat.shape[:3],uvw),order='F').copy()
-            if type(saveFtermPath)!=type(None):
-                np.savetxt((saveFtermPath+str(fterm)+'.txt'),coef,fmt='%.18f',delimiter=' ')
-        rmsList=np.array(rmsList)
-        self.coefMat=coefMat.copy()
-        self.dCoefMat=self.coefMat-self.bsFourier.coef
-        self.rmsList=rmsList.copy()
-        return (coefMat,rmsList)
-    
-    def solve_velocityWise(self,sampleCoord=None,bgCoord=None,regular='norm',maxError=0.0001,maxIteration=1000,fterm_start=1,weight=[1.,1.],convergence=0.8,reportevery=1000,saveFtermPath=None,tempSave=None,resume=False,lmLambda_init=0.001,lmLambda_incrRatio=5.,lmLambda_max=float('inf'),lmLambda_min=0.):
-        if sampleCoord==None:
-            sampleCoord=self.sampleCoord
-        if bgCoord==None:
-            bgCoord=self.bgCoord
-        sampleCoordSize=len(sampleCoord)
-        bgCoordSize=len(bgCoord)
-        print('sampleCoord has %d points, bgCoord has %d points, '%(sampleCoordSize,bgCoordSize),'weight is ', weight)
-        #wdiag=np.ones(sampleCoordSize)
-        n=np.prod(self.coefMat.shape[:3])    #number of control points
-        ft=self.coefMat.shape[3]
-        uvw=self.coefMat.shape[4]
-
-        coefMat=self.coefMat.copy()      #[x,y,z,ft,uvw]
-        dBdXMat=self.dBdXMat.copy()
-        rmsList=[]
-        Basic=self.getMatB(bgCoord)    #len(bgCoord)=len(dCList)
-        Buvw=np.zeros((3*bgCoordSize,3*n))
-        for i in range(uvw):
-            if type(weight[1]) in [np.ndarray,list]:
-                Buvw[i*len(self.bgCoord):(i+1)*bgCoordSize,i*n:(i+1)*n]=Basic*weight[1][i]
+            if mode=='disp':
+                dogW=self.period/2      #coef for divFree equation
+            elif mode=='velc':
+                dogW=((fw*2.*np.pi/self.period)**2)*self.period/2   #coef for divFree equation
             else:
-                Buvw[i*len(self.bgCoord):(i+1)*bgCoordSize,i*n:(i+1)*n]=Basic*weight[1]
-        Buvw=sp.sparse.csr_matrix(Buvw)
-        #matW=sp.sparse.diags(np.ones(len(points)))
-        for fterm in range(fterm_start,ft):
-            print('solve_velocityWise......')
-            if fterm>(ft//2):
-                fw=fterm-ft//2
-                print('Current basic fourier function is sin(%dwt)--------------------'%(fw))
-            else:
-                fw=fterm
-                print('Current basic fourier function is cos(%dwt)--------------------'%(fw))
-
-            dogW=((fw*2.*np.pi/self.period)**2)*self.period/2   #coef for divFree equation
+                print('Error: please input correct method for incompressibility, ICP-disp or ICP-vlec')
+                sys.exit()
+            #dogW=self.period/2      #coef for divFree equation
             coef=np.array(coefMat[:,:,:,fterm,:]).reshape(-1,order='F')   #[n*uvw,1]
             #coef_start=coef.copy()
             dUdX=np.zeros((sampleCoordSize,uvw))    #[sampleCoordSize,uvw]
@@ -594,13 +427,31 @@ class motionConstrain:
             dUdX=np.sum(dUdX,axis=1)
             for ii in range(sampleCoordSize):
                 dRdC[ii,:]*=(2*dogW*dUdX[ii]*weight[0])
-            RMSMat=(dUdX**2)*dogW*weight[0]    #[sampleCoordSize,1]
-            finalRMS=RMSMat.transpose().dot(RMSMat)
+            RMSMat=(dUdX**2)*dogW*weight[0]     #[sampleCoordSize,1]
+            RMSMat = RMSMat/np.sqrt(self.period*self.spacingDivision[0]**3)    #normalized by the period and grid sampling  
+            
+            sparsedRdC=sp.sparse.csr_matrix(dRdC)
+            A = sp.sparse.vstack([sparsedRdC,Buvw],format='csr')            
             
             ftCoefuvw_init=Buvw.dot(coef)    #[3*len(self.bgCoord),1]   
             ftCoefuvw_raw=ftCoefuvw_init
             ftCoefuvw=sp.sparse.csr_matrix(ftCoefuvw_raw).transpose()
-            print('initial RMS is %.8f, initial max(dRdC) is %.6f, initial max(coef) is %.4f, initial max(RMSMat) is %.6f'%(finalRMS,np.abs(dRdC).max(),np.abs(coef).max(),RMSMat.max()))
+            ftCoefuvw = ftCoefuvw/np.sqrt(self.spacingDivision[1]**3)            #normalized by the grid sampling
+            Rfinal = RMSMat.copy()*0
+            Rfinal=sp.sparse.csc_matrix(Rfinal).transpose()
+            sparseRfianl=sp.sparse.vstack([Rfinal,ftCoefuvw],format='csc')
+            
+            sparseRMSMat = sp.sparse.csc_matrix(RMSMat).transpose()
+            sparseRcalcu = sp.sparse.vstack([sparseRMSMat,ftCoefuvw],format='csc')
+            residual = sparseRcalcu - sparseRfianl
+            B = residual.copy()
+            
+            finalRMS = 0.5*residual.transpose().dot(residual).toarray()     # from sparse matrxi to np.array
+            finalRMS = finalRMS[0,0]
+            rmsList.append(6666666666666666)
+            rmsList.append(finalRMS)            
+            
+            print('initial max(dRdC) is %.6f, initial max(coef) is %.4f, initial max(RMSMat) is %.6f'%(np.abs(dRdC).max(),np.abs(coef).max(),RMSMat.max()))
             error=float('inf')
             count=0.
             jumpFlag=0
@@ -608,92 +459,84 @@ class motionConstrain:
             lmLambda=lmLambda_init
             reductionRatio=1.
             while error>maxError and count<maxIteration:
-                print('iteration of solve_matrix of Fterm %d: %.4f----------'%(fterm,count))
-                sparsedRdC=sp.sparse.csr_matrix(dRdC)
-                sparsedRdC=sp.sparse.vstack([sparsedRdC,Buvw],format='csr')
+                print('iteration of solve_matrix of Fterm %d: %.4f-------------------------------'%(fterm,count))
+                print('mean(coef) is {0:.8f}'.format(np.mean(coef)))
                 
-                R0=dRdC.dot(coef)
-                Rfinal=R0-RMSMat
-
-                sparseRMSMat=sp.sparse.csc_matrix(Rfinal).transpose()
-                sparseRMSMat=sp.sparse.vstack([sparseRMSMat,ftCoefuvw],format='csc')
-                matA=sparsedRdC.transpose().dot(sparsedRdC)
+                matA = A.transpose().dot(A)
                 temp=sp.sparse.diags(matA.diagonal())
-                A=sp.sparse.csc_matrix(matA+lmLambda*temp)     #lavenberg-Marquardt correction, add lmLambda*diagonals to the diagonal of matA
-                matB=sparsedRdC.transpose().dot(sparseRMSMat).toarray()
+                A_LM=sp.sparse.csc_matrix(matA+lmLambda*temp)     #lavenberg-Marquardt correction, add lmLambda*diagonals to the diagonal of matA
+                matB = A.transpose().dot(B).toarray()
                 
-                A=splu(A)
-                newCoef=A.solve(matB)   #[n*uvw,1]
-                newCoef=newCoef.reshape((-1,))
+                A_LM=splu(A_LM)
+                dCoef=A_LM.solve(matB) 
+                dCoef = dCoef.reshape((-1,))  #[n*uvw]
+                print('mean(dCoef) {0:f}'.format(np.mean(np.abs(dCoef))))
+                #newCoef=newCoef.reshape((-1,))  #[n*uvw,1]
+                #dCoef=newCoef-coef  #[n*uvw,1]
                 
-                minSpacing=self.spacing[:3].min()
-                coef[np.abs(coef)< minSpacing/1e6] = 0
-                newCoef[np.abs(newCoef)< minSpacing/1e6] = 0
-                dCoef=newCoef-coef  #[n*uvw,1]
+                coef_backup=coef.copy()
+                A_backup=A.copy()
+                B_backup=B.copy()
+                #RMSMat_backup=RMSMat.copy()
+                finalRMS_backup = finalRMS.copy()
+                error_backup = error
+                #ftCoefuvw_backup=ftCoefuvw_raw.copy()
                 
                 error=0
-                coef[np.abs(coef)< minSpacing/1e6] = 0
+                minSpacing=self.spacing[:3].min()
+                #coef[np.abs(coef)< minSpacing/1e6] = 0
+                #newCoef[np.abs(newCoef)< minSpacing/1e6] = 0                                
                 for i in range(dCoef.shape[0]):
                     if coef[i]==0:
                         error=max(error,np.abs(dCoef[i])/minSpacing)
                     else:
+                        temp = np.abs(dCoef[i])/np.abs(coef[i])
+                        #if round(error,8)==1.00000000:
+                            #print('error {0:.2f}, dCoef[i] {1:.2f}, coef[i] {2:.2f}'.format(error, dCoef[i], coef[i]))
                         error=max(error,np.abs(dCoef[i])/np.abs(coef[i]))
-                '''
-                error=0
-                #maxdCoef=np.abs(dCoef).max()
-                for i in range(RMSMat.shape[0]):
-                    if RMSMat_backup[i]!=0:
-                        error=max(error,np.abs(RMSMat_backup[i]-RMSMat[i])/np.abs(RMSMat_backup[i]))
-                '''
-                            
-                coef_backup=coef.copy()
-                dRdC_backup=dRdC.copy()
-                RMSMat_backup=RMSMat.copy()
-                finalRMS_backup = finalRMS.copy()
-                ftCoefuvw_backup=ftCoefuvw_raw.copy()
                 
                 ratio=reductionRatio
                 if convergence:
                     if abs(dCoef).max()>self.bsFourier.spacing[:3].min()*convergence:
-                        ratio=min(ratio,self.bsFourier.spacing[:3].min()*convergence/abs(dCoef).max())
-                
-                coef+=ratio*dCoef
+                        ratio=min(ratio,self.bsFourier.spacing[:3].min()*convergence/abs(dCoef).max())                
+                print('ratio: {0:.8f}; reductionRatio: {1:.8f}'.format(ratio,reductionRatio))
+                                
+                coef-=ratio*dCoef       # + or - decides by the form of residual
                 dUdX=self.getMatdUdX(coef=coef,order='uvw') #[sampleCoordSize,uvw]
                 dUdX=np.sum(dUdX,axis=1)
-                dRdC=self.dBdXMat.copy()    #[sampleCoordSize,uvw*n]
+                dRdC=self.dBdXMat.copy()    #[sampleCoordSize,uvw*n]                                
                 for ii in range(sampleCoordSize):
                     dRdC[ii,:]*=(2*dogW*dUdX[ii]*weight[0])
                 RMSMat=(dUdX**2)*dogW*weight[0]    #[sampleCoordSize,1]
+                RMSMat = RMSMat/np.sqrt(self.period*self.spacingDivision[0]**3)         #normalized by the period and grid sampling
+                print('mean(dRdC) {0:f}'.format(np.mean(np.abs(dRdC)))) 
+                print('mean(RMSMat_i) {0:f}'.format(np.mean(np.abs(RMSMat))))
+                sparsedRdC=sp.sparse.csr_matrix(dRdC)
+                A = sp.sparse.vstack([sparsedRdC,Buvw],format='csr')
                 
-                if regular=='fast':                    
-                    ftCoefuvw_raw=Buvw.dot(coef)    #[3*len(self.BFpoints),1]
-                    ftCoefuvw=sp.sparse.csr_matrix(ftCoefuvw_raw).transpose()
-                    deltaft = ftCoefuvw_raw-ftCoefuvw_backup
-                elif regular=='norm':
-                    ftCoefuvw_raw=Buvw.dot(coef)
-                    deltaft = ftCoefuvw_raw-ftCoefuvw_backup
-                '''
-                if type(weight[1]) in (list, np.array):
-                    if len(weight[1])!=3:
-                        print('error: if weight[1] is a list or array, please input 3 values for xyz')
-                        sys.exit()
-                    wMat_1D=np.concatenate((np.ones(len(RMSMat))*weight[0],np.ones(len(deltaft)/3)*weight[1][0],np.ones(len(deltaft)/3)*weight[1][1],np.ones(len(deltaft)/3)*weight[1][2]))
-                else:
-                    wMat_1D=np.concatenate((np.ones(len(RMSMat))*weight[0],np.ones(len(deltaft))*weight[1]))
-                wMat_2D = np.diag(wMat_1D,0)
-                '''
-                finalRMSMat = np.concatenate((RMSMat,deltaft),axis=0)   #[sampleCoordSize+3*len(self.BFpoints),1]
-                finalRMS = finalRMSMat.transpose().dot(finalRMSMat)                
-                deltarms = finalRMS - finalRMS_backup
-                if deltarms>0.:
-                    print('RMS value increases!!! deltarms is %.4f'%(deltarms))
+                ftCoefuvw_raw=Buvw.dot(coef)    #[3*len(self.bgCoord),1]
+                ftCoefuvw=sp.sparse.csr_matrix(ftCoefuvw_raw).transpose()   
+                ftCoefuvw = ftCoefuvw/np.sqrt(self.spacingDivision[1]**3)                #normalized by the grid sampling
+                sparseRMSMat = sp.sparse.csc_matrix(RMSMat).transpose()
+                sparseRcalcu = sp.sparse.vstack([sparseRMSMat,ftCoefuvw],format='csc')
+                residual = sparseRcalcu - sparseRfianl
+                
+                finalRMS = 0.5*residual.transpose().dot(residual).toarray()
+                finalRMS = finalRMS[0,0]
+                B = residual.copy()
+                deltaRMS = finalRMS - finalRMS_backup
+                if deltaRMS>0.:
+                    print('RMS value increases!!! finalRMS is %f\n      deltaRMS is %f, error is %.8f'%(finalRMS,deltaRMS,error))
                     coef=coef_backup.copy()
-                    dRdC=dRdC_backup.copy()
-                    RMSMat=RMSMat_backup.copy()
-                    finalRMS=finalRMS_backup.copy()
-                    if regular=='fast':
-                        ftCoefuvw_raw=ftCoefuvw_backup.copy()
-                        ftCoefuvw=sp.sparse.csr_matrix(ftCoefuvw_raw).transpose()
+                    A=A_backup.copy()
+                    B=B_backup.copy()
+                    #sparsedRdC=sparsedRdC_backup.copy()
+                    #RMSMat=RMSMat_backup.copy()
+                    finalRMS = finalRMS_backup.copy()
+                    error = error_backup
+                    #ftCoefuvw_raw=ftCoefuvw_backup.copy()
+                    #if regular=='fast':
+                        #ftCoefuvw=sp.sparse.csr_matrix(ftCoefuvw_raw).transpose()
                     #error=float('inf')
                     if (lmLambda*lmLambda_incrRatio)<lmLambda_max:
                         lmLambda*=lmLambda_incrRatio
@@ -714,7 +557,7 @@ class motionConstrain:
                         count=maxIteration  #jump out
                         print('RMS didnt change for %d iteration, Fterm %d jump out!!!!!!!!'%(jumpNum,fterm))
                 else:
-                    print('RMS value is decreased!!! deltarms is %.4f, rate: %.4f, error is %.8f'%(deltarms,np.abs(deltarms)/finalRMS_backup,error))
+                    print('RMS value is decreased!!! finalRMS is %f, deltaRMS is %f, error is %.8f'%(finalRMS,deltaRMS,error))
                     if ratio>0.9 and lmLambda!=lmLambda_min:
                         if (lmLambda/np.sqrt(lmLambda_incrRatio))>lmLambda_min:
                             lmLambda=lmLambda/np.sqrt(lmLambda_incrRatio)
@@ -741,8 +584,6 @@ class motionConstrain:
         self.dCoefMat=self.coefMat-self.bsFourier.coef
         self.rmsList=rmsList.copy()
         return (coefMat,rmsList)
-    
-
     
     def writeFile(self,filepath=None,coefMat=None,dCoefMat=None,divFreeMat=None,errorMat=None,RMSMat=None,dRdCMat=None,delimiter=' '):
         ''' 
@@ -844,7 +685,3 @@ class motionConstrain:
                 self.pointsCoef.append(loadMatrix[n,3:].reshape((-1,3),order='F'))
 
         
-        
-        
-        
-
