@@ -45,7 +45,8 @@ History:
                                                         -motionConstrainSolver version 3.3.1 
   Author: jorry.zhengyu@gmail.com         31Oct2019              -V5.0.0 release version
                                                         -motionConstrain release version 5.0.0
-                                                        -motionConstrainSolver release version 5.0.0                                                         
+                                                        -motionConstrainSolver release version 5.0.0
+                                                        -postProcessBSF release version 5.0.0
 Requirements:
     numpy
     scipy
