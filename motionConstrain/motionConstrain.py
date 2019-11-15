@@ -616,13 +616,13 @@ class motionConstrain:
             np.savetxt(filepath,self.dRdCMat,fmt='%.8f',delimiter=delimiter,comments='',header='(dRdCMatrixSize '+' '.join(map(str, self.dRdCMat.shape))+')\n(coefSize '+' '.join(map(str, self.bsFourier.coef.shape))+')')
             #np.savetxt(filepath,self.dRdCMat.reshape(-1, order='C'),delimiter=delimiter,comments='',header='(dRdCMatrixSize '+' '.join(map(str, self.dRdCMat.shape))+')\n(coefSize '+' '.join(map(str, self.bsFourier.coef.shape))+')')
         
-    def coefZeroRemap(self,coef=None,remap=None):
+    def coefZeroRemap(self,coef=None,time=None):
         if type(coef)==type(None):
             coef=self.coefMat.copy()
-        if type(remap)!=type(None):
+        if type(time)!=type(None):
             coef[:,:,:,0]=0.
             for m in range(self.coefMat.shape[3]//2):#int(len(solver.pointsCoef[0])/2)):
-                coef[:,:,:,0]-=coef[:,:,:,m+1]*np.cos((m+1.)*2.*np.pi/self.period*remap)+coef[:,:,:,(self.coefMat.shape[3]//2)+m+1]*np.sin((m+1.)*2.*np.pi/self.period*remap)
+                coef[:,:,:,0]-=coef[:,:,:,m+1]*np.cos((m+1.)*2.*np.pi/self.period*time)+coef[:,:,:,(self.coefMat.shape[3]//2)+m+1]*np.sin((m+1.)*2.*np.pi/self.period*time)
             self.coefMat=coef.copy()
             return coef
         else:
