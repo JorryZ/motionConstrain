@@ -9,7 +9,7 @@ Modules: numpy, imageio, medImgProc, motionSegmentation
 History:
     Date    Programmer SAR# - Description
     ---------- ---------- ----------------------------
-  Author: jorry.zhengyu@gmail.com         15NOV2019           -V1.0.0 release version, process with BSF model file
+  Author: jorry.zhengyu@gmail.com         15NOV2019           -V5.0.0 release version, process with BSF model file
           function: pointTrace, coefCombiner, coefZeroRemap, timeRemap, reShape,vtk2img, lazySnapImg, divFree, meshVolume, errorCalc, imgScaling, vtkSampling
 
 """
@@ -25,7 +25,7 @@ import motionSegmentation.BsplineFourier as BsplineFourier
 import motionSegmentation.bfSolver as bfSolver
 import motionConstrain as motionConstrain
 
-print('postProcessBSF version 1.0.0')
+print('postProcessBSF version 5.0.0')
 print('postProcessBSF Help: input funcName(funcHelp=True) to get help for functions')
 
 # edit part ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
