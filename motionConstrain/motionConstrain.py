@@ -25,7 +25,7 @@ History:
   Author: jorry.zhengyu@gmail.com         03Oct2019              -V4.2.1 test version, solve_displacementWise, set certain coef to 0
   Author: jorry.zhengyu@gmail.com         04Oct2019              -V4.2.2 test version, deltarms calculation
   Author: jorry.zhengyu@gmail.com         10Oct2019              -V4.3.0 test version, calculate deltaC, normalize RMSMat by period and point number by 1/spacingDivision
-  Author: jorry.zhengyu@gmail.com         30Oct2019              -V5.0.0 release version
+  Author: jorry.zhengyu@gmail.com         30Oct2019              -V5.0.0 release version, sampling normalization, two regular for ICP (norm, greed)
 """
 print('motionConstrain test version 5.0.0')
 import sys
@@ -515,14 +515,29 @@ class motionConstrain:
                 ftCoefuvw_raw=Buvw.dot(coef)    #[3*len(self.bgCoord),1]
                 ftCoefuvw=sp.sparse.csr_matrix(ftCoefuvw_raw).transpose()   
                 ftCoefuvw = ftCoefuvw/np.sqrt(self.spacingDivision[1]**3)                #normalized by the grid sampling
-                sparseRMSMat = sp.sparse.csc_matrix(RMSMat).transpose()
-                sparseRcalcu = sp.sparse.vstack([sparseRMSMat,ftCoefuvw],format='csc')
-                residual = sparseRcalcu - sparseRfianl
                 
-                finalRMS = 0.5*residual.transpose().dot(residual).toarray()
-                finalRMS = finalRMS[0,0]
-                B = residual.copy()
-                deltaRMS = finalRMS - finalRMS_backup
+                if regular=='norm':
+                    sparseRMSMat = sp.sparse.csc_matrix(RMSMat).transpose()
+                    sparseRcalcu = sp.sparse.vstack([sparseRMSMat,ftCoefuvw],format='csc')
+                    residual = sparseRcalcu - sparseRfianl
+                    
+                    finalRMS = 0.5*residual.transpose().dot(residual).toarray()
+                    finalRMS = finalRMS[0,0]
+                    B = residual.copy()
+                    deltaRMS = finalRMS - finalRMS_backup
+                
+                elif regular=='greed':
+                    sparseRMSMat_backup=sparseRMSMat
+                    sparseRMSMat = sp.sparse.csc_matrix(RMSMat).transpose()
+                    sparseRfianl_backup=sparseRfianl
+                    sparseRfianl=sp.sparse.vstack([Rfinal,ftCoefuvw],format='csc')
+                    
+                    sparseRcalcu = sp.sparse.vstack([sparseRMSMat,ftCoefuvw],format='csc')
+                    residual = sparseRcalcu - sparseRfianl
+                    B = residual.copy()
+                    deltaRMS=np.sum(sparseRMSMat-sparseRMSMat_backup)
+                    error=np.abs(deltaRMS/np.sum(sparseRMSMat_backup))      #greedy method, only calculate the change of divergence as deltaRMS and error
+                
                 if deltaRMS>0.:
                     print('RMS value increases!!! finalRMS is %f\n      deltaRMS is %f, error is %.8f'%(finalRMS,deltaRMS,error))
                     coef=coef_backup.copy()
@@ -533,7 +548,9 @@ class motionConstrain:
                     finalRMS = finalRMS_backup.copy()
                     error = error_backup
                     #ftCoefuvw_raw=ftCoefuvw_backup.copy()
-                    #if regular=='fast':
+                    if regular=='greed':
+                        sparseRMSMat=sparseRMSMat_backup.copy()
+                        sparseRfianl=sparseRfianl_backup.copy()
                         #ftCoefuvw=sp.sparse.csr_matrix(ftCoefuvw_raw).transpose()
                     #error=float('inf')
                     if (lmLambda*lmLambda_incrRatio)<lmLambda_max:
