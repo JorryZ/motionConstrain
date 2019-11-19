@@ -47,7 +47,7 @@ History:
                                                         -motionConstrain release version 5.0.0
                                                         -motionConstrainSolver release version 5.0.0
                                                         -postProcessBSF release version 5.0.0
-  Author: jorry.zhengyu@gmail.com         10NOV2019              -V5.0.1 release version
+  Author: jorry.zhengyu@gmail.com         19NOV2019              -V5.0.1 release version
                                                         -motionConstrain release version 5.0.1
                                                         -motionConstrainSolver release version 5.0.1
                                                         -postProcessBSF release version 5.0.0                                                     
@@ -68,5 +68,5 @@ import os
 import sys
 sys.path.insert(0, os.path.dirname(os.path.realpath(__file__)))
 
-from motionConstrain import *
-from motionConstrainSolver import *
+import motionConstrain.motionConstrain as motionConstrain
+import motionConstrain.motionConstrainSolver as motionConstrainSolver
