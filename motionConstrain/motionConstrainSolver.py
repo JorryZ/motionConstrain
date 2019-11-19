@@ -24,7 +24,7 @@ History:
   Author: jorry.zhengyu@gmail.com         30Oct2019            -V5.0.0 release version
   Author: jorry.zhengyu@gmail.com         19NOV2019            -V5.0.1 release version, add judgment for bsfName
 """
-print('motionConstrainSolver version 5.0.0')
+print('motionConstrainSolver version 5.0.1')
 print('Warning: the bsFourier.txt should be in the real time, not in the phantom time, like "f3_t1".')
 
 import os
