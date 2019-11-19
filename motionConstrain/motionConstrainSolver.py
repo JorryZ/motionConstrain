@@ -22,6 +22,7 @@ History:
   Author: jorry.zhengyu@gmail.com         02Oct2019            -V3.2.3 modify solve input
   Author: jorry.zhengyu@gmail.com         03Oct2019            -V3.3.0 pointSampling, default spacingDivision=[4.,1.]
   Author: jorry.zhengyu@gmail.com         30Oct2019            -V5.0.0 release version
+  Author: jorry.zhengyu@gmail.com         19NOV2019            -V5.0.1 release version, add judgment for bsfName
 """
 print('motionConstrainSolver version 5.0.0')
 print('Warning: the bsFourier.txt should be in the real time, not in the phantom time, like "f3_t1".')
@@ -58,7 +59,10 @@ class mcSolver:
         
     def initialize(self,casePath=None,bsfName=None,finalShape=None,gap=1,SampleCoords=True):
         self.casePath=casePath
-        self.bsfName=bsfName
+        if bsfName[-4:]=='.txt':
+            self.bsfName=bsfName[:-4]
+        else:
+            self.bsfName=bsfName
         
         self.motionConstrain.initialize(coefFile=(casePath+'\\'+bsfName+'.txt'),spacingDivision=[1.,1.5],gap=0,SampleCoords=True)
         rawShape=self.motionConstrain.coefMat.shape
