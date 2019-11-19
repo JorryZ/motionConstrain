@@ -28,7 +28,7 @@ History:
   Author: jorry.zhengyu@gmail.com         30Oct2019              -V5.0.0 release version, sampling normalization, two regular for ICP (norm, greed)
   Author: jorry.zhengyu@gmail.com         19NOV2019              -V5.0.1 release version, fix up error for regular
 """
-print('motionConstrain test version 5.0.1')
+print('motionConstrain version 5.0.1')
 import sys
 import numpy as np
 import math
