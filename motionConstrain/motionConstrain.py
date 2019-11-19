@@ -573,7 +573,10 @@ class motionConstrain:
                         count=maxIteration  #jump out
                         print('RMS didnt change for %d iteration, Fterm %d jump out!!!!!!!!'%(jumpNum,fterm))
                 else:
-                    print('RMS value is decreased!!! finalRMS is %f, deltaRMS is %f, error is %.8f'%(finalRMS,deltaRMS,error))
+                    if regular=='norm':
+                        print('RMS value is decreased!!! finalRMS is %f, deltaRMS is %f, error is %.8f'%(finalRMS,deltaRMS,error))
+                    elif regular=='greed':
+                        print('RMS value is decreased!!! finalRMS is %f, deltaRMS is %f, error is %.8f'%(np.sum(sparseRMSMat),deltaRMS,error))
                     if ratio>0.9 and lmLambda!=lmLambda_min:
                         if (lmLambda/np.sqrt(lmLambda_incrRatio))>lmLambda_min:
                             lmLambda=lmLambda/np.sqrt(lmLambda_incrRatio)
@@ -584,7 +587,10 @@ class motionConstrain:
                     #rms=np.sum(RMSMat)  #new rms
                     count+=1
                 
-                rmsList.append(finalRMS)                
+                if regular=='norm':
+                    rmsList.append(finalRMS)
+                elif regular=='greed':
+                    rmsList.append(np.sum(sparseRMSMat))               
                 #print('RMS is %.8f, error is %.8f'%(finalRMS,error))
                 #print('max(dRdC) is %.6f, max(coef) is %.4f, max(RMSMat) is %.6f'%(np.abs(dRdC).max(),np.abs(coef).max(),RMSMat.max()))
                 if count==maxIteration:
