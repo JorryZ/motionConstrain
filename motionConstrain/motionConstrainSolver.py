@@ -35,14 +35,14 @@ import trimesh
 import medImgProc
 import motionSegmentation.BsplineFourier as BsplineFourier
 import motionSegmentation.bfSolver as bfSolver
-import motionConstrain
+import motionConstrain.motionConstrain as MC
 
 class mcSolver:
     # Needed files: bsf.txt, gt.vtk and img, input.stl
     def __new__(cls, *args, **kwargs):
         return super().__new__(cls)
     def __init__(self):
-        self.motionConstrain=motionConstrain.motionConstrain()
+        self.motionConstrain=MC.motionConstrain()
         self.casePath=None
         self.bsfName=None
         self.sampleSource=None                  #sample points from: stl mask (stl), vtk mask (vtk), global mask (gm)
