@@ -26,8 +26,9 @@ History:
   Author: jorry.zhengyu@gmail.com         04Oct2019              -V4.2.2 test version, deltarms calculation
   Author: jorry.zhengyu@gmail.com         10Oct2019              -V4.3.0 test version, calculate deltaC, normalize RMSMat by period and point number by 1/spacingDivision
   Author: jorry.zhengyu@gmail.com         30Oct2019              -V5.0.0 release version, sampling normalization, two regular for ICP (norm, greed)
+  Author: jorry.zhengyu@gmail.com         19NOV2019              -V5.0.1 release version, fix up error for regular
 """
-print('motionConstrain test version 5.0.0')
+print('motionConstrain test version 5.0.1')
 import sys
 import numpy as np
 import math
@@ -367,11 +368,10 @@ class motionConstrain:
         regular: 'norm', 'fast', for ftCoefuvw (initial, update)
         Weight: Weight[0] for sampleCoord, Weight[1] for bgCoord
         '''
-        print('method: {0:s}, regular: {1:s}'.format(method,regular))
         self.weight=weight
         if method=='ICP-disp' or  method=='ICP-velc':
             mode=method[-4:]
-            coefMat,rmsList=self.incompressibility(mode=mode,sampleCoord=sampleCoord,bgCoord=bgCoord,maxError=maxError,maxIteration=maxIteration,fterm_start=fterm_start,weight=weight,convergence=convergence,reportevery=reportevery,saveFtermPath=saveFtermPath,tempSave=tempSave,resume=resume)
+            coefMat,rmsList=self.incompressibility(mode=mode,sampleCoord=sampleCoord,bgCoord=bgCoord,regular=regular,maxError=maxError,maxIteration=maxIteration,fterm_start=fterm_start,weight=weight,convergence=convergence,reportevery=reportevery,saveFtermPath=saveFtermPath,tempSave=tempSave,resume=resume)
         print('motionConstrain.solve completed')
 
     def incompressibility(self,mode=None,sampleCoord=None,bgCoord=None,regular='norm',maxError=0.0001,maxIteration=1000,weight=[1.,1.],fterm_start=1,convergence=0.5,reportevery=1000,saveFtermPath=None,tempSave=None,resume=False,lmLambda_init=0.001,lmLambda_incrRatio=5.,lmLambda_max=float('inf'),lmLambda_min=0.):
@@ -381,6 +381,7 @@ class motionConstrain:
             bgCoord=self.bgCoord
         sampleCoordSize=len(sampleCoord)
         bgCoordSize=len(bgCoord)
+        print('method: ICP-{0:s}, regular: {1:s}'.format(mode,regular))
         print('sampleCoord has %d points, bgCoord has %d points, '%(sampleCoordSize,bgCoordSize),'weight is ', weight)
         #wdiag=np.ones(sampleCoordSize)
         n=np.prod(self.coefMat.shape[:3])    #number of control points
