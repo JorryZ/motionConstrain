@@ -11,6 +11,7 @@ History:
     ---------- ---------- ----------------------------
   Author: jorry.zhengyu@gmail.com         15NOV2019           -V5.0.0 release version, process with BSF model file
           function: pointTrace, coefCombiner, coefZeroRemap, timeRemap, reShape,vtk2img, lazySnapImg, divFree, meshVolume, errorCalc, imgScaling, vtkSampling
+  Author: jorry.zhengyu@gmail.com         18Dec2019           -V5.0.2 release version, import issue
 
 """
 
@@ -23,9 +24,9 @@ import medImgProc.image as image
 
 import motionSegmentation.BsplineFourier as BsplineFourier
 import motionSegmentation.bfSolver as bfSolver
-import motionConstrain as motionConstrain
+import motionConstrain.motionConstrain as motionConstrain
 
-print('postProcessBSF version 5.0.0')
+print('postProcessBSF version 5.0.2')
 print('postProcessBSF Help: input funcName(funcHelp=True) to get help for functions')
 
 # edit part ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
