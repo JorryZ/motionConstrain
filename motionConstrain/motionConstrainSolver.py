@@ -23,8 +23,9 @@ History:
   Author: jorry.zhengyu@gmail.com         03Oct2019            -V3.3.0 pointSampling, default spacingDivision=[4.,1.]
   Author: jorry.zhengyu@gmail.com         30Oct2019            -V5.0.0 release version
   Author: jorry.zhengyu@gmail.com         19NOV2019            -V5.0.1 release version, add judgment for bsfName
+  Author: jorry.zhengyu@gmail.com         06Jan2020            -V5.0.3 release version, modify regular bug
 """
-print('motionConstrainSolver version 5.0.1')
+#print('motionConstrainSolver version 5.0.3')
 print('Warning: the bsFourier.txt should be in the real time, not in the phantom time, like "f3_t1".')
 
 import os
@@ -218,8 +219,8 @@ class mcSolver:
         
         if self.bgGlobalField==False:
             savePath=savePath+'_extra'
-        if regular=='fast':
-            savePath=savePath+'_fast'
+        if regular!='norm':
+            savePath=savePath+'_{:s}'.format(regular)
         try:
             savePath=savePath+'_'+customPath+'\\'
             print('CustomPath setting: ',customPath)
