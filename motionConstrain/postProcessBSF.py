@@ -12,6 +12,7 @@ History:
   Author: jorry.zhengyu@gmail.com         15NOV2019           -V5.0.0 release version, process with BSF model file
           function: pointTrace, coefCombiner, coefZeroRemap, timeRemap, reShape,vtk2img, lazySnapImg, divFree, meshVolume, errorCalc, imgScaling, vtkSampling
   Author: jorry.zhengyu@gmail.com         18Dec2019           -V5.0.2 release version, import issue
+  Author: jorry.zhengyu@gmail.com         07JAN2020           -V5.0.4 release version, modify function vtk2img and lazySnapImg
 
 """
 
@@ -26,16 +27,13 @@ import motionSegmentation.BsplineFourier as BsplineFourier
 import motionSegmentation.bfSolver as bfSolver
 import motionConstrain.motionConstrain as motionConstrain
 
-print('postProcessBSF version 5.0.2')
-print('postProcessBSF Help: input funcName(funcHelp=True) to get help for functions')
+print('postProcessBSF version 5.0.4')
 
 # edit part ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-def pointTrace(BSFfile=None, STLfile=None, savePath=None, customPath=None, funcHelp=False):
-    if funcHelp:
-        print('Function pointTrace is to track the motion of points from STL file, and generate new STL over cycle.')
-        print('Inputs of this function are: path+name of BSFfile, path+name of STLfile, name of saving folder (savePath).')
-        print('A sub-folder is automatically created to save files, folder name: stl+customPath')
-        return
+def pointTrace(BSFfile=None, STLfile=None, savePath=None, customPath=None):
+    print('Function pointTrace is to track the motion of points from STL file, and generate new STL over cycle.')
+    print('Inputs of this function are: path+name of BSFfile, path+name of STLfile, name of saving folder (savePath).')
+    print('A sub-folder is automatically created to save files, folder name: stl+customPath')
     try:
         savePath=savePath+'\\stl-'+customPath
     except:
@@ -45,11 +43,9 @@ def pointTrace(BSFfile=None, STLfile=None, savePath=None, customPath=None, funcH
     solver.pointTrace(stlFile=STLfile, savePath=savePath, timeList=int(solver.bsFourier.spacing[3]))
     print('function pointTrace done! Have a happy day ^_^')
     
-def timeRemap(rawBSFfile=None, newBSFfile=None, time=0, funcHelp=False):
-    if funcHelp:
-        print('Function timeRemap is to remap BSF to appointed time point as new reference timing.')
-        print('Inputs of this function are: path+name of rawBSFfile, path+name of newBSFfile, time as reference timing (default 0).')
-        return
+def timeRemap(rawBSFfile=None, newBSFfile=None, time=0):
+    print('Function timeRemap is to remap BSF to appointed time point as new reference timing.')
+    print('Inputs of this function are: path+name of rawBSFfile, path+name of newBSFfile, time as reference timing (default 0).')
     solver=bfSolver.bfSolver()
     solver.bsFourier=BsplineFourier.BsplineFourier(rawBSFfile)
     #fourierTerms=solver.bsFourier.coef.shape[3]//2
@@ -61,11 +57,9 @@ def timeRemap(rawBSFfile=None, newBSFfile=None, time=0, funcHelp=False):
     solver.bsFourier.regridToTime(solver.points,solver.pointsCoef,time=time)
     solver.bsFourier.writeCoef(newBSFfile)
     
-def coefCombiner(rawBSFfile=None, newBSFfilePath=None, newBSFfile=None, time=0, funcHelp=False):
-    if funcHelp:
-        print('Function coefCombiner is to combine all results of different fourier terms.')
-        print('Inputs of this function are: path+name of rawBSFfile, saving folder path of newBSFfile (newBSFfilePath), name of newBSFfile time as reference timing (default 0).')
-        return
+def coefCombiner(rawBSFfile=None, newBSFfilePath=None, newBSFfile=None, time=0):
+    print('Function coefCombiner is to combine all results of different fourier terms.')
+    print('Inputs of this function are: path+name of rawBSFfile, saving folder path of newBSFfile (newBSFfilePath), name of newBSFfile time as reference timing (default 0).')
     saveFtermPath=newBSFfilePath+'\\coefFT'
     solver=motionConstrain.motionConstrain()
     solver.initialize(coefFile=rawBSFfile)
@@ -77,21 +71,17 @@ def coefCombiner(rawBSFfile=None, newBSFfilePath=None, newBSFfile=None, time=0, 
     solver.coefZeroRemap(time=time)
     solver.writeFile((newBSFfilePath+'\\'+newBSFfile),coefMat=1)
     
-def coefZeroRemap(rawBSFfile=None, newBSFfile=None, time=0, funcHelp=False):
-    if funcHelp:
-        print('Function coefZeroRemap is to calculate the value of DC term (zero term) after processing the Fourier terms.')
-        print('Inputs of this function are: path+name of rawBSFfile, path+name of newBSFfile, time as reference timing (default 0).')
-        return
+def coefZeroRemap(rawBSFfile=None, newBSFfile=None, time=0):
+    print('Function coefZeroRemap is to calculate the value of DC term (zero term) after processing the Fourier terms.')
+    print('Inputs of this function are: path+name of rawBSFfile, path+name of newBSFfile, time as reference timing (default 0).')
     solver=motionConstrain.motionConstrain()
     solver.initialize(coefFile=rawBSFfile)
     solver.coefZeroRemap(time=time)
     solver.writeFile(newBSFfile,coefMat=1)
     
-def reShape(rawBSFfile=None, newBSFfile=None, finalShape=None, funcHelp=False):
-    if funcHelp:
-        print('Function reShape is to change the size of the bsplineFourier matrix (size of control point matrix).')
-        print('Inputs of this function are: path+name of rawBSFfile, path+name of newBSFfile, desired shape (finalShape: [x,y,z,ft,uvw]).')
-        return
+def reShape(rawBSFfile=None, newBSFfile=None, finalShape=None):
+    print('Function reShape is to change the size of the bsplineFourier matrix (size of control point matrix).')
+    print('Inputs of this function are: path+name of rawBSFfile, path+name of newBSFfile, desired shape (finalShape: [x,y,z,ft,uvw]).')
     solver=bfSolver.bfSolver()
     solver.bsFourier=BsplineFourier.BsplineFourier(rawBSFfile)
     try:
@@ -100,14 +90,21 @@ def reShape(rawBSFfile=None, newBSFfile=None, finalShape=None, funcHelp=False):
     except:
         print('Error: please input correct finalShape [x,y,z,ft,uvw]')
     
-def vtk2img(VTKfile=None, savePath=None, funcHelp=False):
-    if funcHelp:
-        print('Function vtk2img is to convert 3D VTK to 2D slice image (png).')
-        print('Inputs of this function are: path+name of VTKfile, saving folder path of image (savePath).')
-        return
+def vtk2img(VTKfile=None, savePath=None, lazySnapTime=None):
+    print('Function vtk2img is to convert 3D VTK to 2D slice image (png).')
+    print('Inputs of this function are: path+name of VTKfile, saving folder path of image (savePath), lazySnapTime to get lazySnap APP format png.')
     os.makedirs(savePath, exist_ok=True)
     img=medImgProc.imread(VTKfile)
     img.imwrite2D(savePath,axes=['y','x'])
+    
+    if type(lazySnapTime)!=type(None):
+        currentDim=img.dim[:]
+        axes=['z','y','x']
+        transposeIndex,currentDim=image.arrangeDim(currentDim,axes,False)
+        data=img.data.transpose(transposeIndex)
+        zSlice=data.shape[0]
+        for m in range(zSlice):
+            imageio.imwrite(os.path.normpath(savePath+'time{:0>3d}/slice{0:0>3d}time{1:0>3d}'.format(m+1,lazySnapTime)+'.png'),data[m])
 #    vtkPath='D:\\4.Cardiac motion tracking\\v{0:d}\\3DUS\\VTK\\'.format(case)
 #    timeNum=timeNumDict[case]
 #    #timeNum=17
@@ -116,20 +113,14 @@ def vtk2img(VTKfile=None, savePath=None, funcHelp=False):
 #        img=medImgProc.imread(vtkName+'.vtk')
 #        img.imwrite2D(vtkName,axes=['y','x'])
     
-def lazySnapImg(VTKfile=None, savePath=None, funcHelp=False):
-    if funcHelp:
-        print('Function lazySnapImg is to convert 3D VTK to 2D slice image (png in lazySnap format).')
-        print('Inputs of this function are: path+name of VTKfile, saving folder path of image (savePath).')
-        return
+def lazySnapImg(rawFilePath=None, sliceNum=None, savePath=None):
+    print('Function lazySnapImg is to convert imageio generated image to lazySnap format image.')
+    print('Inputs of this function are: path raw image and slice number of images, saving folder path of image (savePath).')
     os.makedirs(savePath, exist_ok=True)
-    img=medImgProc.imread(VTKfile)
-    currentDim=img.dim[:]
-    axes=['z','y','x']
-    transposeIndex,currentDim=image.arrangeDim(currentDim,axes,False)
-    data=img.data.transpose(transposeIndex)
-    zSlice=data.shape[0]
-    for m in range(zSlice):
-        imageio.imwrite(os.path.normpath(savePath+'/slice{:0>3d}time{:s}'.format(m+1,savePath[-3:])+'.png'),data[m])
+    
+    for m in range(sliceNum):
+        temp = imageio.imread(os.path.normpath(rawFilePath+'/z{:d}'.format(m)+'.png'))
+        imageio.imwrite(os.path.normpath(savePath+'/slice{:0>3d}time{:s}'.format(m+1,savePath[-3:])+'.png'),temp)
 #    vtkPath='D:\\4.Cardiac motion tracking\\v{0:d}\\3DUS\\VTK\\'.format(case)
 #    #timeNum=timeNumDict[case]
 #    timeNum=1
@@ -146,11 +137,9 @@ def lazySnapImg(VTKfile=None, savePath=None, funcHelp=False):
 #        for m in range(zSlice):
 #            imageio.imwrite(os.path.normpath(savePath+'/slice{:0>3d}time{:0>3d}'.format(m+1,n+1)+'.png'),data[m])
     
-def meshVolumeError(meshVolumeFile=None, funcHelp=False):
-    if funcHelp:
-        print('Function meshVolumeError is to calculate RMS error of mesh volume over cylce.')
-        print('Inputs of this function are: path+name of meshVolumeFile.')
-        return
+def meshVolumeError(meshVolumeFile=None):
+    print('Function meshVolumeError is to calculate RMS error of mesh volume over cylce.')
+    print('Inputs of this function are: path+name of meshVolumeFile.')
     meshVolume=np.loadtxt(meshVolumeFile,delimiter=' ')
     totalVolume=np.sum(meshVolume,axis=0)
     print('totalVolume: ',totalVolume)
