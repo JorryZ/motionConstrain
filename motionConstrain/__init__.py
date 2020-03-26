@@ -67,6 +67,10 @@ History:
                                                         -motionConstrain release version 5.0.1
                                                         -motionConstrainSolver release version 5.0.5
                                                         -postProcessBSF release version 5.0.4
+  Author: jorry.zhengyu@gmail.com         26Mar2020              -V5.0.6 release version
+                                                        -motionConstrain release version 5.0.1
+                                                        -motionConstrainSolver release version 5.0.6
+                                                        -postProcessBSF release version 5.0.4                                                        
 Requirements:
     numpy
     scipy
@@ -77,7 +81,7 @@ Requirements:
     pickle (optional)
 All rights reserved.
 """
-_version='5.0.5'
+_version='5.0.6'
 print('motionConstrain version',_version)
 
 import os
