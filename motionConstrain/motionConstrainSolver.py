@@ -25,8 +25,9 @@ History:
   Author: jorry.zhengyu@gmail.com         19NOV2019            -V5.0.1 release version, add judgment for bsfName
   Author: jorry.zhengyu@gmail.com         06Jan2020            -V5.0.3 release version, modify regular bug
   Author: jorry.zhengyu@gmail.com         26Mar2020            -V5.0.5 release version, reshape function
+  Author: jorry.zhengyu@gmail.com         26Mar2020            -V5.0.6 release version, reshape function
 """
-#print('motionConstrainSolver version 5.0.5')
+#print('motionConstrainSolver version 5.0.6')
 print('Warning: the bsFourier.txt should be in the real time, not in the phantom time, like "f3_t1".')
 
 import os
@@ -190,6 +191,7 @@ class mcSolver:
         if self.reShape==True:
             sampleCoord=self.motionConstrain.sampleCoord.copy()
             bgCoord=self.motionConstrain.bgCoord.copy()
+            spacingDivision=self.motionConstrain.spacingDivision
             
             self.motionConstrain=MC.motionConstrain()
             try:
@@ -212,6 +214,7 @@ class mcSolver:
                 #sys.exit()
             self.motionConstrain.sampleCoord=sampleCoord.copy()
             self.motionConstrain.bgCoord=bgCoord.copy()
+            self.motionConstrain.spacingDivision = spacingDivision.copy()
         #savePath: mode, mask, sampleRatio (R), weights, grid size
         if self.finalShape[0]==self.finalShape[1] and self.finalShape[0]==self.finalShape[2]:
             savePath=self.casePath+'\\'+'{0:s}_{6:s}_R{1:.2f}-{2:.2f}_W{3:.1f}-{4:.1f}_G{5:d}'.format(method,self.sampleRatio[0],self.sampleRatio[1],weight[0]**2,weight[1]**2,self.finalShape[0],self.sampleSource)
