@@ -24,8 +24,9 @@ History:
   Author: jorry.zhengyu@gmail.com         30Oct2019            -V5.0.0 release version
   Author: jorry.zhengyu@gmail.com         19NOV2019            -V5.0.1 release version, add judgment for bsfName
   Author: jorry.zhengyu@gmail.com         06Jan2020            -V5.0.3 release version, modify regular bug
+  Author: jorry.zhengyu@gmail.com         26Mar2020            -V5.0.5 release version, reshape function
 """
-#print('motionConstrainSolver version 5.0.3')
+#print('motionConstrainSolver version 5.0.5')
 print('Warning: the bsFourier.txt should be in the real time, not in the phantom time, like "f3_t1".')
 
 import os
@@ -190,7 +191,7 @@ class mcSolver:
             sampleCoord=self.motionConstrain.sampleCoord.copy()
             bgCoord=self.motionConstrain.bgCoord.copy()
             
-            self.motionConstrain=motionConstrain.motionConstrain()
+            self.motionConstrain=MC.motionConstrain()
             try:
                 self.motionConstrain.initialize(coefFile=(self.casePath+'\\'+self.bsfName+'_{0:d}-{1:d}-{2:d}.txt'.format(self.finalShape[0],self.finalShape[1],self.finalShape[2])),SampleCoords=True,gap=5)
             except:
