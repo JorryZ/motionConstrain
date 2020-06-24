@@ -13,6 +13,7 @@ History:
           function: pointTrace, coefCombiner, coefZeroRemap, timeRemap, reShape,vtk2img, lazySnapImg, divFree, meshVolume, errorCalc, imgScaling, vtkSampling
   Author: jorry.zhengyu@gmail.com         18Dec2019           -V5.0.2 release version, import issue
   Author: jorry.zhengyu@gmail.com         07JAN2020           -V5.0.4 release version, modify function vtk2img and lazySnapImg
+  Author: jorry.zhengyu@gmail.com         24Jun2020           -V5.0.7 release version, add samplePointsFromVTK function
 
 """
 
@@ -27,7 +28,7 @@ import motionSegmentation.BsplineFourier as BsplineFourier
 import motionSegmentation.bfSolver as bfSolver
 import motionConstrain.motionConstrain as motionConstrain
 
-print('postProcessBSF version 5.0.4')
+print('postProcessBSF version 5.0.7')
 
 # edit part ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 def pointTrace(BSFfile=None, STLfile=None, savePath=None, customPath=None):
@@ -136,7 +137,23 @@ def lazySnapImg(rawFilePath=None, sliceNum=None, savePath=None):
 #        zSlice=data.shape[0]
 #        for m in range(zSlice):
 #            imageio.imwrite(os.path.normpath(savePath+'/slice{:0>3d}time{:0>3d}'.format(m+1,n+1)+'.png'),data[m])
-    
+
+def samplePointsFromVTK(BSFfile=None,VTKfile=None,savePath=None,dimlen=None,scale=1.,spacingDivision=5):
+    print('Function samplePointsFromVTK is to sample points from myocardium VTK.')
+    vtkData=medImgProc.imread(VTKfile)
+    vtkData.dim=['z','y','x']
+    vtkData.dimlen=dimlen
+    vtkData.rearrangeDim(['x','y','z'])
+    solver=bfSolver.bfSolver()
+    solver.bsFourier=BsplineFourier.BsplineFourier(BSFfile)
+    samplepts1=solver.bsFourier.samplePoints(spacingDivision=spacingDivision[0])
+    wall=[]
+    for m in range(len(samplepts1)):
+        if vtkData.getData(samplepts1[m])>=0.5:
+            wall.append(samplepts1[m].copy())
+    sampleCoord=wall.copy()
+    np.savetxt(savePath,sampleCoord,fmt='%.8f',delimiter=' ')
+
 def meshVolumeError(meshVolumeFile=None):
     print('Function meshVolumeError is to calculate RMS error of mesh volume over cylce.')
     print('Inputs of this function are: path+name of meshVolumeFile.')
