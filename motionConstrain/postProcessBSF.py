@@ -14,6 +14,7 @@ History:
   Author: jorry.zhengyu@gmail.com         18Dec2019           -V5.0.2 release version, import issue
   Author: jorry.zhengyu@gmail.com         07JAN2020           -V5.0.4 release version, modify function vtk2img and lazySnapImg
   Author: jorry.zhengyu@gmail.com         24Jun2020           -V5.0.7 release version, add samplePointsFromVTK function
+  Author: jorry.zhengyu@gmail.com         16Feb2021           -V5.0.8 release version, timeRemap function add phantom
 
 """
 
@@ -28,7 +29,7 @@ import motionSegmentation.BsplineFourier as BsplineFourier
 import motionSegmentation.bfSolver as bfSolver
 import motionConstrain.motionConstrain as motionConstrain
 
-print('postProcessBSF version 5.0.7')
+print('postProcessBSF version 5.0.8')
 
 # edit part ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 def pointTrace(BSFfile=None, STLfile=None, savePath=None, customPath=None):
@@ -44,9 +45,9 @@ def pointTrace(BSFfile=None, STLfile=None, savePath=None, customPath=None):
     solver.pointTrace(stlFile=STLfile, savePath=savePath, timeList=int(solver.bsFourier.spacing[3]))
     print('function pointTrace done! Have a happy day ^_^')
     
-def timeRemap(rawBSFfile=None, newBSFfile=None, time=0):
+def timeRemap(rawBSFfile=None, newBSFfile=None, time=0, phantom=True):
     print('Function timeRemap is to remap BSF to appointed time point as new reference timing.')
-    print('Inputs of this function are: path+name of rawBSFfile, path+name of newBSFfile, time as reference timing (default 0).')
+    print('Inputs of this function are: path+name of rawBSFfile, path+name of newBSFfile, time as reference timing (default 0), phantom=True if regrid from phantom time point.')
     solver=bfSolver.bfSolver()
     solver.bsFourier=BsplineFourier.BsplineFourier(rawBSFfile)
     #fourierTerms=solver.bsFourier.coef.shape[3]//2
@@ -55,6 +56,8 @@ def timeRemap(rawBSFfile=None, newBSFfile=None, time=0):
     for m in range(len(solver.points)):
         coef=solver.bsFourier.getRefCoef(solver.points[m])
         solver.pointsCoef.append(coef.copy())
+        if phantom==False:
+            solver.points[m] = solver.points[m] + coef[0,:]
     solver.bsFourier.regridToTime(solver.points,solver.pointsCoef,time=time)
     solver.bsFourier.writeCoef(newBSFfile)
     
