@@ -15,6 +15,7 @@ History:
   Author: jorry.zhengyu@gmail.com         07JAN2020           -V5.0.4 release version, modify function vtk2img and lazySnapImg
   Author: jorry.zhengyu@gmail.com         24Jun2020           -V5.0.7 release version, add samplePointsFromVTK function
   Author: jorry.zhengyu@gmail.com         16Feb2021           -V5.0.8 release version, timeRemap function add phantom
+  Author: jorry.zhengyu@gmail.com         11MAR2021           -V5.0.9 release version, pointTrace function add timeList
 
 """
 
@@ -29,10 +30,10 @@ import motionSegmentation.BsplineFourier as BsplineFourier
 import motionSegmentation.bfSolver as bfSolver
 import motionConstrain.motionConstrain as motionConstrain
 
-print('postProcessBSF version 5.0.8')
+print('postProcessBSF version 5.0.9')
 
 # edit part ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-def pointTrace(BSFfile=None, STLfile=None, savePath=None, customPath=None):
+def pointTrace(BSFfile=None, STLfile=None, savePath=None, timeList=None, customPath=None):
     print('Function pointTrace is to track the motion of points from STL file, and generate new STL over cycle.')
     print('Inputs of this function are: path+name of BSFfile, path+name of STLfile, name of saving folder (savePath).')
     print('A sub-folder is automatically created to save files, folder name: stl+customPath')
@@ -42,7 +43,9 @@ def pointTrace(BSFfile=None, STLfile=None, savePath=None, customPath=None):
         savePath=savePath+'\\stl'
     solver=bfSolver.bfSolver()
     solver.bsFourier=BsplineFourier.BsplineFourier(coefFile=BSFfile)
-    solver.pointTrace(stlFile=STLfile, savePath=savePath, timeList=int(solver.bsFourier.spacing[3]))
+    if type(timeList)==type(None):
+        timeList=int(solver.bsFourier.spacing[3])
+    solver.pointTrace(stlFile=STLfile, savePath=savePath, timeList=timeList)
     print('function pointTrace done! Have a happy day ^_^')
     
 def timeRemap(rawBSFfile=None, newBSFfile=None, time=0, phantom=True):
